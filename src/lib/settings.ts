@@ -1,6 +1,6 @@
 export type SmartBookmarkAiSettings = {
   enabled: boolean;
-  endpointUrl: string;
+  baseUrl: string;
   model: string;
   apiKey: string;
 };
@@ -18,7 +18,7 @@ export const DEFAULT_SETTINGS: SmartBookmarkSettings = {
   closeOnSave: true,
   ai: {
     enabled: false,
-    endpointUrl: 'https://api.openai.com/v1/chat/completions',
+    baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-4o-mini',
     apiKey: ''
   }
@@ -44,16 +44,33 @@ function coerceBool(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
 
+function normalizeBaseUrl(raw: string): string {
+  let value = raw.trim();
+  if (!value) return value;
+
+  value = value.replace(/\/+$/, '');
+  if (value.endsWith('/chat/completions')) value = value.slice(0, -'/chat/completions'.length);
+  if (value.endsWith('/responses')) value = value.slice(0, -'/responses'.length);
+
+  value = value.replace(/\/+$/, '');
+  return value;
+}
+
 function sanitizeSettings(raw: unknown): SmartBookmarkSettings {
   const obj = (raw && typeof raw === 'object') ? (raw as Record<string, unknown>) : {};
   const aiRaw = (obj.ai && typeof obj.ai === 'object') ? (obj.ai as Record<string, unknown>) : {};
+
+  const rawBaseUrl =
+    coerceString(aiRaw.baseUrl, '') ||
+    // backward compat (v5.0): endpointUrl
+    coerceString(aiRaw.endpointUrl, DEFAULT_SETTINGS.ai.baseUrl);
 
   return {
     topN: clampInt(obj.topN, DEFAULT_SETTINGS.topN, 1, 10),
     closeOnSave: coerceBool(obj.closeOnSave, DEFAULT_SETTINGS.closeOnSave),
     ai: {
       enabled: coerceBool(aiRaw.enabled, DEFAULT_SETTINGS.ai.enabled),
-      endpointUrl: coerceString(aiRaw.endpointUrl, DEFAULT_SETTINGS.ai.endpointUrl).trim(),
+      baseUrl: normalizeBaseUrl(rawBaseUrl || DEFAULT_SETTINGS.ai.baseUrl),
       model: coerceString(aiRaw.model, DEFAULT_SETTINGS.ai.model).trim(),
       apiKey: coerceString(aiRaw.apiKey, DEFAULT_SETTINGS.ai.apiKey)
     }
@@ -82,4 +99,3 @@ export async function updateSettings(partial: Partial<SmartBookmarkSettings>): P
   await saveSettings(next);
   return next;
 }
-

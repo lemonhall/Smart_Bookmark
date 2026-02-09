@@ -28,7 +28,7 @@ test('uses AI fallback when no host matches (and does not upload bookmark URLs)'
         closeOnSave: true,
         ai: {
           enabled: true,
-          endpointUrl: 'https://api.openai.com/v1/chat/completions',
+          baseUrl: 'https://api.openai.com/v1',
           model: 'gpt-4o-mini',
           apiKey: 'sk-test'
         }
@@ -38,13 +38,18 @@ test('uses AI fallback when no host matches (and does not upload bookmark URLs)'
   });
 
   let capturedBody = '';
-  await context.route('https://api.openai.com/v1/chat/completions', async (route, request) => {
+  await context.route('https://api.openai.com/v1/responses', async (route, request) => {
     capturedBody = request.postData() ?? '';
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        choices: [{ message: { content: JSON.stringify({ folderIds: [ids.feId] }) } }]
+        output: [
+          {
+            type: 'message',
+            content: [{ type: 'output_text', text: JSON.stringify({ folderIds: [ids.feId] }) }]
+          }
+        ]
       })
     });
   });
@@ -73,4 +78,3 @@ test('uses AI fallback when no host matches (and does not upload bookmark URLs)'
   await context.close();
   fs.rmSync(userDataDir, { recursive: true, force: true });
 });
-

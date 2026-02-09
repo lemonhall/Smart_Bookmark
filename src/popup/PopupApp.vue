@@ -197,7 +197,7 @@ async function loadRecommendations(): Promise<void> {
 
   if (recommendations.value.length === 0 && settings.value.ai.enabled) {
     const aiIds = await recommendAiFolderIds({
-      endpointUrl: settings.value.ai.endpointUrl,
+      baseUrl: settings.value.ai.baseUrl,
       apiKey: settings.value.ai.apiKey,
       model: settings.value.ai.model,
       topN: settings.value.topN,

@@ -173,7 +173,7 @@ popup 必须展示：
 - “保存后自动关闭 popup”（默认开启）
 - AI 兜底推荐开关（默认关闭）
 - AI 配置（OpenAI-compatible）：
-  - Endpoint URL（例如 `https://api.openai.com/v1/chat/completions`）
+  - Base URL（例如 `https://api.openai.com/v1`）
   - Model
   - API Key
 
@@ -206,3 +206,22 @@ AI 请求仅允许包含 REQ-016 列出的最小信息集。
 
 **验收（Acceptance）**
 - A1：E2E/集成测试可断言：AI 请求 payload 不包含用户书签 URL（只包含 folder path/id 与当前 tab 的 url/title）。
+
+## 10. v6 增量需求（Adopt openagentic-sdk-ts）
+
+### REQ-018 使用 openagentic OpenAI Provider（P1）
+
+AI 兜底推荐的 OpenAI 调用实现应复用 `openagentic-sdk-ts` 的 OpenAI provider（Responses API），以获得：
+- 浏览器 fetch 绑定兼容（避免 “Illegal invocation”）
+- 统一的请求/响应解析与可测试性
+
+**验收（Acceptance）**
+- A1：AI 开启时，网络请求打到 `${baseUrl}/responses`（而非手写 `fetch` 到 chat completions）。
+- A2：`npm test` 覆盖：mock `fetch`，断言 request body 含当前 tab url，且不含任意书签 URL（除当前 tab url）。
+
+### REQ-019 Host 权限（P1）
+
+为了允许 popup 发起 OpenAI 请求，扩展需要包含必要的 host permissions（至少覆盖默认 OpenAI baseUrl）。
+
+**验收（Acceptance）**
+- A1：`public/manifest.json` 包含 `https://api.openai.com/*` 的 host 权限声明。

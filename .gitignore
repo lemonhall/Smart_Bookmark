@@ -3,4 +3,4 @@ dist/
 playwright-report/
 test-results/
 .DS_Store
-
+vendor/**/dist/

@@ -11,6 +11,7 @@
     "service_worker": "background.js",
     "type": "module"
   },
+  "host_permissions": ["https://api.openai.com/*"],
   "permissions": ["bookmarks", "tabs", "activeTab", "storage"],
   "commands": {
     "open-smart-bookmark": {

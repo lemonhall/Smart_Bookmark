@@ -4,16 +4,19 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:ext": "vite build --watch",
-    "build": "vite build",
-    "build:test": "vite build --mode test",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "dev": "npm run build:deps && vite",
+    "dev:ext": "npm run build:deps && vite build --watch",
+    "build:deps": "tsc -p vendor/openagentic-sdk-ts/packages/core/tsconfig.build.json && tsc -p vendor/openagentic-sdk-ts/packages/providers-openai/tsconfig.build.json",
+    "build": "npm run build:deps && vite build",
+    "build:test": "npm run build:deps && vite build --mode test",
+    "test": "npm run build:deps && vitest run",
+    "test:watch": "npm run build:deps && vitest",
     "e2e": "npm run build:test && playwright test",
     "e2e:ui": "npm run build:test && playwright test --ui"
   },
   "dependencies": {
+    "@openagentic/providers-openai": "file:vendor/openagentic-sdk-ts/packages/providers-openai",
+    "@openagentic/sdk-core": "file:vendor/openagentic-sdk-ts/packages/core",
     "tldts": "^7.0.23",
     "vue": "^3.5.0"
   },

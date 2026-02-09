@@ -33,13 +33,13 @@
       </div>
 
       <div class="row">
-        <label class="label" for="endpointUrl">Endpoint URL</label>
+        <label class="label" for="baseUrl">Base URL</label>
         <input
-          id="endpointUrl"
+          id="baseUrl"
           class="input"
           type="text"
-          placeholder="https://api.openai.com/v1/chat/completions"
-          v-model.trim="endpointUrl"
+          placeholder="https://api.openai.com/v1"
+          v-model.trim="baseUrl"
         />
       </div>
 
@@ -85,7 +85,7 @@ import { DEFAULT_SETTINGS, loadSettings, saveSettings } from '../lib/settings';
 const topN = ref<number>(DEFAULT_SETTINGS.topN);
 const closeOnSave = ref<boolean>(DEFAULT_SETTINGS.closeOnSave);
 const aiEnabled = ref<boolean>(DEFAULT_SETTINGS.ai.enabled);
-const endpointUrl = ref<string>(DEFAULT_SETTINGS.ai.endpointUrl);
+const baseUrl = ref<string>(DEFAULT_SETTINGS.ai.baseUrl);
 const model = ref<string>(DEFAULT_SETTINGS.ai.model);
 const apiKey = ref<string>(DEFAULT_SETTINGS.ai.apiKey);
 
@@ -114,7 +114,7 @@ async function onSave() {
       closeOnSave: closeOnSave.value,
       ai: {
         enabled: aiEnabled.value,
-        endpointUrl: endpointUrl.value,
+        baseUrl: baseUrl.value,
         model: model.value,
         apiKey: apiKey.value
       }
@@ -131,7 +131,7 @@ async function onReset() {
   topN.value = DEFAULT_SETTINGS.topN;
   closeOnSave.value = DEFAULT_SETTINGS.closeOnSave;
   aiEnabled.value = DEFAULT_SETTINGS.ai.enabled;
-  endpointUrl.value = DEFAULT_SETTINGS.ai.endpointUrl;
+  baseUrl.value = DEFAULT_SETTINGS.ai.baseUrl;
   model.value = DEFAULT_SETTINGS.ai.model;
   apiKey.value = DEFAULT_SETTINGS.ai.apiKey;
   await onSave();
@@ -143,7 +143,7 @@ onMounted(async () => {
     topN.value = s.topN;
     closeOnSave.value = s.closeOnSave;
     aiEnabled.value = s.ai.enabled;
-    endpointUrl.value = s.ai.endpointUrl;
+    baseUrl.value = s.ai.baseUrl;
     model.value = s.ai.model;
     apiKey.value = s.ai.apiKey;
   } catch {
@@ -277,4 +277,3 @@ onMounted(async () => {
   }
 }
 </style>
-

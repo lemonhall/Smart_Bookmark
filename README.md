@@ -5,7 +5,7 @@ Chrome Manifest V3 extension that recommends bookmark folders for the current pa
 ## Features
 
 - Host-based folder recommendations (Top N) from existing bookmarks
-- Optional AI fallback recommendations (only when enabled)
+- Optional AI fallback recommendations (only when enabled; OpenAI Responses API)
 - Options page for configuring behavior
 - Editable title + choose folder + save bookmark
 - AI disabled by default → popup makes zero `http(s)` requests (enforced by E2E)
@@ -42,6 +42,7 @@ Chrome Manifest V3 extension that recommends bookmark folders for the current pa
 - Options UI: `src/options/OptionsApp.vue`
 - Core algorithm: `src/lib/recommendHostFolders.ts`
 - AI fallback client: `src/lib/aiRecommendFolders.ts`
+- OpenAI provider (vendored from `lemonhall/openagentic-sdk-ts`): `vendor/openagentic-sdk-ts/`
 - E2E harness (bookmark seeding/reset): `src/testHarness/harness.ts`
 - E2E launcher: `e2e/utils/launchExtension.ts`
 - CI workflow: `.github/workflows/ci.yml`

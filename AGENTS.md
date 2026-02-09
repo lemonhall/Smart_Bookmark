@@ -20,6 +20,7 @@ This repo is a Chrome Manifest V3 extension (Vue 3 + Vite + TypeScript) with **V
 - Core algorithm (pure TS, unit-tested): `src/lib/recommendHostFolders.ts`
 - Settings (storage): `src/lib/settings.ts` (key: `sbSettings`)
 - AI fallback client (OpenAI-compatible): `src/lib/aiRecommendFolders.ts`
+- OpenAI provider SDK (vendored): `vendor/openagentic-sdk-ts/`
 - E2E test harness (runs inside extension origin):
   - page: `src/testHarness/harness.html`
   - API: `src/testHarness/harness.ts` (exposes `window.__sbHarness`)

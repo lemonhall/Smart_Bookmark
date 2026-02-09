@@ -26,7 +26,12 @@ describe('recommendAiFolderIds', () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        choices: [{ message: { content: '{"folderIds":["10","11"]}' } }]
+        output: [
+          {
+            type: 'message',
+            content: [{ type: 'output_text', text: '{"folderIds":["10","11"]}' }]
+          }
+        ]
       })
     });
     // @ts-expect-error test stub
@@ -34,7 +39,7 @@ describe('recommendAiFolderIds', () => {
 
     const leak = 'https://secret.example.com/private';
     const result = await recommendAiFolderIds({
-      endpointUrl: 'https://api.openai.com/v1/chat/completions',
+      baseUrl: 'https://api.openai.com/v1',
       apiKey: 'sk-test',
       model: 'gpt-4o-mini',
       topN: 3,
@@ -52,6 +57,6 @@ describe('recommendAiFolderIds', () => {
     const bodyText = call[1]?.body as string;
     expect(bodyText).toContain('https://unknown.example.com/docs/vue');
     expect(bodyText).not.toContain(leak);
+    expect(bodyText).toContain('"store":false');
   });
 });
-

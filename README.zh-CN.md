@@ -5,7 +5,7 @@
 ## 功能概览
 
 - 基于 Host 的文件夹推荐（Top N）
-- 可选的 AI 兜底推荐（默认关闭）
+- 可选的 AI 兜底推荐（默认关闭；使用 OpenAI Responses API）
 - 设置页（Options）用于配置行为与 AI
 - 标题可编辑、可选文件夹、确认后创建书签
 - AI 默认关闭 → popup **零网络请求**（E2E 会断言无 `http(s)` 请求）
@@ -42,6 +42,7 @@
 - Options（Vue UI）：`src/options/OptionsApp.vue`
 - 核心算法：`src/lib/recommendHostFolders.ts`
 - AI 兜底：`src/lib/aiRecommendFolders.ts`
+- OpenAI Provider（从 `lemonhall/openagentic-sdk-ts` vendor 引入）：`vendor/openagentic-sdk-ts/`
 - E2E Harness（种书签/重置）：`src/testHarness/harness.ts`
 - E2E 启动器：`e2e/utils/launchExtension.ts`
 - CI：`.github/workflows/ci.yml`
