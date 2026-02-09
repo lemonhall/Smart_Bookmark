@@ -10,6 +10,14 @@ function promisifyVoid(fn: (cb: () => void) => void): Promise<void> {
   return new Promise((resolve) => fn(resolve));
 }
 
+function storageClear(): Promise<void> {
+  return promisifyVoid((cb) => chrome.storage.local.clear(cb));
+}
+
+function storageSet(items: Record<string, unknown>): Promise<void> {
+  return promisifyVoid((cb) => chrome.storage.local.set(items, cb));
+}
+
 function getTree(): Promise<BookmarkNode[]> {
   return promisify((cb) => chrome.bookmarks.getTree(cb));
 }
@@ -67,6 +75,7 @@ async function reset(): Promise<void> {
     await removeTree(existing.id);
   }
   testRootId = await createFolder(barId, TEST_ROOT_TITLE);
+  await storageClear();
 }
 
 declare global {
@@ -77,6 +86,7 @@ declare global {
       createFolder: (parentId: string, title: string) => Promise<string>;
       createBookmark: (parentId: string, title: string, url: string) => Promise<string>;
       findBookmarksByUrl: (url: string) => Promise<BookmarkNode[]>;
+      setLocalStorage: (items: Record<string, unknown>) => Promise<void>;
     };
   }
 }
@@ -86,6 +96,6 @@ window.__sbHarness = {
   getTestRootId: ensureTestRoot,
   createFolder,
   createBookmark,
-  findBookmarksByUrl: searchByUrl
+  findBookmarksByUrl: searchByUrl,
+  setLocalStorage: storageSet
 };
-

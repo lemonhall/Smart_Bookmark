@@ -1,12 +1,14 @@
-# Smart Bookmark（MVP）
+# Smart Bookmark
 
-一个 Chrome Manifest V3 扩展：在收藏页面时，根据 **hostname(host)** 从你现有书签中推断最可能的文件夹（Top 3），让收藏更快。
+一个 Chrome Manifest V3 扩展：在收藏页面时，根据现有书签推断最可能的文件夹（Top N），让收藏更快。
 
-## v1 包含什么
+## 功能概览
 
-- 基于 Host 的文件夹推荐（Top 3）
+- 基于 Host 的文件夹推荐（Top N）
+- 可选的 AI 兜底推荐（默认关闭）
+- 设置页（Options）用于配置行为与 AI
 - 标题可编辑、可选文件夹、确认后创建书签
-- v1 **零网络请求**（E2E 会断言 popup 期间无 `http(s)` 请求）
+- AI 默认关闭 → popup **零网络请求**（E2E 会断言无 `http(s)` 请求）
 - 自动化测试：Vitest + Playwright（真实加载扩展的端到端兜底）
 
 ## 开发
@@ -28,12 +30,18 @@
 
 - 默认：`Ctrl+Shift+Y`（可在 `chrome://extensions/shortcuts` 自己改）
 
+## 设置页（Options）
+
+- 打开扩展设置页可配置 Top N / 保存后是否自动关闭 / AI 兜底推荐。
+
 ## 目录速览
 
 - Manifest：`public/manifest.json`
 - 后台 SW：`src/background.ts`
 - Popup（Vue UI）：`src/popup/PopupApp.vue`
+- Options（Vue UI）：`src/options/OptionsApp.vue`
 - 核心算法：`src/lib/recommendHostFolders.ts`
+- AI 兜底：`src/lib/aiRecommendFolders.ts`
 - E2E Harness（种书签/重置）：`src/testHarness/harness.ts`
 - E2E 启动器：`e2e/utils/launchExtension.ts`
 - CI：`.github/workflows/ci.yml`

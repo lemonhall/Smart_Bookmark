@@ -161,3 +161,48 @@ popup 必须展示：
 **验收（Acceptance）**
 - A1：GitHub Actions workflow 可见且在 push 时自动触发。
 - A2：CI 日志显示单测与 E2E 都通过。
+
+## 9. v5 增量需求（Settings + AI Fallback）
+
+> v5 开始允许**可选网络请求**（仅在用户显式开启 AI 时），因此必须同时交付设置页与对应的 E2E 兜底。
+
+### REQ-015 扩展设置页（Options Page）（P0）
+
+扩展提供设置页（Chrome `options_page`），至少包含：
+- 推荐数量（Top N，默认 3）
+- “保存后自动关闭 popup”（默认开启）
+- AI 兜底推荐开关（默认关闭）
+- AI 配置（OpenAI-compatible）：
+  - Endpoint URL（例如 `https://api.openai.com/v1/chat/completions`）
+  - Model
+  - API Key
+
+**验收（Acceptance）**
+- A1：设置页能读取并展示当前设置（首次打开为默认值）。
+- A2：设置页修改并保存后，重新打开 popup 生效（例如 Top N 改为 1 时只展示 1 条推荐）。
+- A3：AI 默认关闭时，popup 不发起任何 `http(s)` 请求（保持 v1 的隐私验收口径不变）。
+
+### REQ-016 Strategy B：AI 语义兜底推荐（P0）
+
+当 Strategy A（Host/eTLD+1 等规则）无命中时：
+- 若用户在设置页开启 AI 且配置完整，则调用 LLM（OpenAI-compatible endpoint）
+- 输入仅包含：
+  - 当前页面 `url`、`title`
+  - 书签文件夹候选列表（`id` + `path`）
+- LLM 输出最多 3 个文件夹 id，作为推荐列表展示（来源标注为 AI）
+
+**验收（Acceptance）**
+- A1：当 Host 推荐为空且 AI 开启时，popup 会出现 AI 推荐（Top N 条）。
+- A2：AI 调用失败（网络/配置/解析异常）时不阻塞收藏流程：仍可手动选择文件夹并保存。
+- A3：Playwright E2E 覆盖：拦截并伪造 LLM 响应，断言 popup 展示 AI 推荐并可成功保存。
+
+### REQ-017 AI 隐私最小化（P0）
+
+AI 请求中不得上传：
+- 任何已存在书签条目的 URL 列表（避免把用户书签库外传）
+- 任何遥测数据
+
+AI 请求仅允许包含 REQ-016 列出的最小信息集。
+
+**验收（Acceptance）**
+- A1：E2E/集成测试可断言：AI 请求 payload 不包含用户书签 URL（只包含 folder path/id 与当前 tab 的 url/title）。

@@ -13,7 +13,13 @@ This repo is a Chrome Manifest V3 extension (Vue 3 + Vite + TypeScript) with **V
   - entry: `popup.html`
   - app: `src/popup/main.ts`
   - UI: `src/popup/PopupApp.vue`
+- Options UI (Vue):
+  - entry: `options.html`
+  - app: `src/options/main.ts`
+  - UI: `src/options/OptionsApp.vue`
 - Core algorithm (pure TS, unit-tested): `src/lib/recommendHostFolders.ts`
+- Settings (storage): `src/lib/settings.ts` (key: `sbSettings`)
+- AI fallback client (OpenAI-compatible): `src/lib/aiRecommendFolders.ts`
 - E2E test harness (runs inside extension origin):
   - page: `src/testHarness/harness.html`
   - API: `src/testHarness/harness.ts` (exposes `window.__sbHarness`)
@@ -32,6 +38,7 @@ User triggers popup / command
 ### Persistence / Side Effects
 - The extension operates on **real Chrome bookmarks**.
 - E2E tests create a dedicated folder `__SB_TEST_ROOT__` under the bookmarks bar and clean/reset it via the harness.
+  - Harness reset also clears `chrome.storage.local`, and can set local storage via `window.__sbHarness.setLocalStorage(...)`.
 
 ## 2) Code Conventions (Negative Knowledge)
 
@@ -44,6 +51,11 @@ User triggers popup / command
   - Why: PRD v1 requires zero telemetry / zero outbound requests; E2E asserts there are no `http(s)` requests from the popup.
   - Do instead: keep logic local; if you must add network in future vN, update PRD + plans + E2E expectations together.
   - Verify: `npm run e2e` (tests include “no http(s) requests” assertions).
+
+- AI is allowed only when explicitly enabled in settings.
+  - Why: PRD v5 introduces optional network for AI fallback; default must remain zero-network.
+  - Do instead: keep AI disabled by default; ensure any AI request payload excludes bookmark URLs.
+  - Verify: `npm run e2e` (includes both “no network when AI off” and “AI fallback when enabled”).
 
 - Do not “fix” E2E by switching to system Google Chrome.
   - Why: Google Chrome may ignore `--disable-extensions-except`, and extension loading becomes flaky/blocked.

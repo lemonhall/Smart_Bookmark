@@ -1,12 +1,14 @@
-# Smart Bookmark (MVP)
+# Smart Bookmark
 
-Chrome Manifest V3 extension that recommends bookmark folders by host (hostname) and lets you confirm to save quickly.
+Chrome Manifest V3 extension that recommends bookmark folders for the current page and lets you confirm to save quickly.
 
-## What’s in v1
+## Features
 
-- Host-based folder recommendations (Top 3) from existing bookmarks
+- Host-based folder recommendations (Top N) from existing bookmarks
+- Optional AI fallback recommendations (only when enabled)
+- Options page for configuring behavior
 - Editable title + choose folder + save bookmark
-- Zero network calls (v1 requirement; enforced by E2E)
+- AI disabled by default → popup makes zero `http(s)` requests (enforced by E2E)
 - Automated tests: Vitest + Playwright (real extension E2E)
 
 ## Dev
@@ -28,12 +30,18 @@ Chrome Manifest V3 extension that recommends bookmark folders by host (hostname)
 
 - Default command: `Ctrl+Shift+Y` (you can change it at `chrome://extensions/shortcuts`)
 
+## Options
+
+- Open the extension options page to configure Top N / close-on-save / AI fallback.
+
 ## Repo map
 
 - Manifest: `public/manifest.json`
 - Background SW: `src/background.ts`
 - Popup UI: `src/popup/PopupApp.vue`
+- Options UI: `src/options/OptionsApp.vue`
 - Core algorithm: `src/lib/recommendHostFolders.ts`
+- AI fallback client: `src/lib/aiRecommendFolders.ts`
 - E2E harness (bookmark seeding/reset): `src/testHarness/harness.ts`
 - E2E launcher: `e2e/utils/launchExtension.ts`
 - CI workflow: `.github/workflows/ci.yml`

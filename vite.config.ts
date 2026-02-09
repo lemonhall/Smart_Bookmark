@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: {
           popup: 'popup.html',
+          options: 'options.html',
           background: 'src/background.ts',
           ...(includeHarness ? { harness: 'src/testHarness/harness.html' } : {})
         },

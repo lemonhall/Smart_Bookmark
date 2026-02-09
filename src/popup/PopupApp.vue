@@ -42,7 +42,8 @@
             <div class="folder-info">
               <span class="folder-name">{{ rec.folderTitle }}</span>
               <span class="folder-path">{{ folderPathById[rec.folderId] ?? rec.folderTitle }}</span>
-              <span class="folder-count">{{ rec.count }} items</span>
+              <span v-if="rec.source === 'host'" class="folder-count">{{ rec.count }} items</span>
+              <span v-else class="folder-count">AI suggestion</span>
             </div>
             <div class="check-mark" v-if="selectedFolderId === rec.folderId">✓</div>
           </label>
@@ -99,7 +100,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { recommendHostFolders, type HostFolderRecommendation } from '../lib/recommendHostFolders';
+import { recommendHostFolders } from '../lib/recommendHostFolders';
+import { DEFAULT_SETTINGS, loadSettings, type SmartBookmarkSettings } from '../lib/settings';
+import { recommendAiFolderIds } from '../lib/aiRecommendFolders';
 
 // --- 保持逻辑不变 ---
 function getQueryParam(name: string): string | null {
@@ -114,12 +117,19 @@ function promisify<T>(fn: (cb: (result: T) => void) => void): Promise<T> {
 
 const pageUrl = ref<string>('');
 const pageTitle = ref<string>('');
-const recommendations = ref<HostFolderRecommendation[]>([]);
+type FolderRecommendation = {
+  folderId: string;
+  folderTitle: string;
+  source: 'host' | 'ai';
+  count?: number;
+};
+const recommendations = ref<FolderRecommendation[]>([]);
 const selectedFolderId = ref<string>('');
 const allFolders = ref<Array<{ id: string; title: string; path: string }>>([]);
 const folderPathById = ref<Record<string, string>>({});
 const saveStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle');
 const duplicateLocations = ref<string[]>([]);
+const settings = ref<SmartBookmarkSettings>(DEFAULT_SETTINGS);
 
 const canSave = computed(() => pageUrl.value.length > 0 && selectedFolderId.value.length > 0);
 
@@ -138,6 +148,12 @@ async function loadPageContext(): Promise<void> {
 
 async function loadRecommendations(): Promise<void> {
   if (!pageUrl.value) return;
+  try {
+    settings.value = await loadSettings();
+  } catch {
+    settings.value = DEFAULT_SETTINGS;
+  }
+
   const tree = await promisify((cb) => chrome.bookmarks.getTree(cb));
   const folders: Array<{ id: string; title: string; path: string }> = [];
   const paths: Record<string, string> = {};
@@ -172,11 +188,32 @@ async function loadRecommendations(): Promise<void> {
   allFolders.value = folders;
   folderPathById.value = paths;
 
-  recommendations.value = recommendHostFolders({
+  const hostRecs = recommendHostFolders({
     url: pageUrl.value,
     bookmarksTree: tree as any,
-    limit: 3
+    limit: settings.value.topN
   });
+  recommendations.value = hostRecs.map((r) => ({ ...r, source: 'host' as const }));
+
+  if (recommendations.value.length === 0 && settings.value.ai.enabled) {
+    const aiIds = await recommendAiFolderIds({
+      endpointUrl: settings.value.ai.endpointUrl,
+      apiKey: settings.value.ai.apiKey,
+      model: settings.value.ai.model,
+      topN: settings.value.topN,
+      pageUrl: pageUrl.value,
+      pageTitle: pageTitle.value,
+      folders: folders.map((f) => ({ id: f.id, path: f.path }))
+    });
+    const byId = new Map(folders.map((f) => [f.id, f] as const));
+    const aiRecs = aiIds
+      .map((id) => byId.get(id))
+      .filter(Boolean)
+      .map((f) => ({ folderId: f!.id, folderTitle: f!.title, source: 'ai' as const }));
+
+    if (aiRecs.length > 0) recommendations.value = aiRecs;
+  }
+
   selectedFolderId.value = recommendations.value[0]?.folderId ?? '';
 
   try {
@@ -216,7 +253,11 @@ async function onSave(): Promise<void> {
     );
     await promisify((cb) => chrome.storage.local.set({ lastFolderId: selectedFolderId.value }, cb));
     saveStatus.value = 'saved';
-    setTimeout(() => { if (saveStatus.value === 'saved') window.close(); }, 1500);
+    if (settings.value.closeOnSave) {
+      setTimeout(() => {
+        if (saveStatus.value === 'saved') window.close();
+      }, 1500);
+    }
   } catch {
     saveStatus.value = 'error';
   }
