@@ -23,6 +23,10 @@ Chrome Manifest V3 extension that recommends bookmark folders by host (hostname)
 3. Enable Developer mode
 4. Load unpacked → select `dist/`
 
+## Shortcut
+
+- Default command: `Ctrl+Shift+Y` (you can change it at `chrome://extensions/shortcuts`)
+
 ## Repo map
 
 - Manifest: `public/manifest.json`

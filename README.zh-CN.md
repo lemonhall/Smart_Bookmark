@@ -23,6 +23,10 @@
 3. 打开 Developer mode（开发者模式）
 4. Load unpacked（加载已解压的扩展）→ 选择 `dist/`
 
+## 快捷键
+
+- 默认：`Ctrl+Shift+Y`（可在 `chrome://extensions/shortcuts` 自己改）
+
 ## 目录速览
 
 - Manifest：`public/manifest.json`
@@ -42,4 +46,3 @@
 
 如果需要走代理下载（示例）：
 - `$env:HTTPS_PROXY='http://127.0.0.1:7897'; $env:HTTP_PROXY='http://127.0.0.1:7897'; $env:NO_PROXY='127.0.0.1,localhost'; npx playwright install chromium`
-

@@ -34,7 +34,7 @@
 
 用户通过以下任一方式触发：
 - 点击扩展图标打开 popup
-- 使用扩展快捷键（默认 `Ctrl+Shift+D`）
+- 使用扩展快捷键（默认 `Ctrl+Shift+Y`）
 
 **验收（Acceptance）**
 - A1：打开 popup 时能读取到当前 active tab 的 `url`/`title`。
@@ -88,4 +88,3 @@ popup 必须展示：
 - D2：`npm run e2e` 全绿（Playwright）。
 - D3：`npm run build` 成功产出 `dist/`，可作为 Chrome unpacked extension 加载。
 - D4（反作弊）：E2E 需真实加载扩展并走通“种书签 → 打开 popup → 出现推荐 → 点击确认创建书签”的路径（不得只测静态页面）。
-

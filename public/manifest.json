@@ -14,8 +14,8 @@
   "commands": {
     "open-smart-bookmark": {
       "suggested_key": {
-        "default": "Ctrl+Shift+D",
-        "mac": "Command+Shift+D"
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
       },
       "description": "Open Smart Bookmark"
     }
