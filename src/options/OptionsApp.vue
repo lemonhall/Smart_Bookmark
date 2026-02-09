@@ -66,19 +66,21 @@
       </div>
 
       <p class="hint">
-        Only sent when AI is enabled and host-based recommendations are empty. The request includes the current tab
-        URL/title and folder candidates (id/path) — it does not upload existing bookmark URLs.
+        Requests are sent only when AI is enabled. If “Always show AI suggestions” is on, the popup will also fetch AI
+        suggestions even when host-based matches exist; otherwise it only runs as a fallback.
+        The request includes the current tab URL/title and folder candidates (id/path) — it does not upload existing
+        bookmark URLs.
       </p>
     </section>
 
     <footer class="footer">
       <div class="status" :class="status.kind" v-if="status.kind !== 'idle'">{{ status.message }}</div>
       <div class="actions">
-        <button class="button secondary" type="button" @click="onTest" :disabled="saving">
-          {{ saving ? 'Working…' : 'Test' }}
+        <button class="button secondary" type="button" @click="onTest" :disabled="busy">
+          {{ testing ? 'Testing…' : 'Test LLM connection' }}
         </button>
-        <button class="button secondary" type="button" @click="onReset" :disabled="saving">Reset</button>
-        <button class="button" type="button" @click="onSave" :disabled="saving">
+        <button class="button secondary" type="button" @click="onReset" :disabled="busy">Reset</button>
+        <button class="button" type="button" @click="onSave" :disabled="busy">
           {{ saving ? 'Saving…' : 'Save' }}
         </button>
       </div>
@@ -87,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings } from '../lib/settings';
 import { testAiConnection } from '../lib/testAiConnection';
 
@@ -100,6 +102,8 @@ const model = ref<string>(DEFAULT_SETTINGS.ai.model);
 const apiKey = ref<string>(DEFAULT_SETTINGS.ai.apiKey);
 
 const saving = ref(false);
+const testing = ref(false);
+const busy = computed(() => saving.value || testing.value);
 const status = reactive<{ kind: 'idle' | 'ok' | 'error'; message: string }>({ kind: 'idle', message: '' });
 
 function setStatus(kind: 'idle' | 'ok' | 'error', message: string) {
@@ -183,7 +187,7 @@ async function onSave() {
 }
 
 async function onTest() {
-  saving.value = true;
+  testing.value = true;
   setStatus('idle', '');
   try {
     const okPerm = await ensureHostPermissionForBaseUrl();
@@ -196,14 +200,14 @@ async function onTest() {
     });
 
     if (!res.ok) {
-      setStatus('error', `Test failed: ${res.error}`);
+      setStatus('error', `LLM connection failed: ${res.error}`);
       return;
     }
-    setStatus('ok', `OK: ${res.assistantText}`);
+    setStatus('ok', `LLM connection OK: ${res.assistantText}`);
   } catch {
-    setStatus('error', 'Test failed');
+    setStatus('error', 'LLM connection failed');
   } finally {
-    saving.value = false;
+    testing.value = false;
   }
 }
 
