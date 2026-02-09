@@ -2,6 +2,8 @@
 
 Chrome Manifest V3 extension that recommends bookmark folders for the current page and lets you confirm to save quickly.
 
+![Smart Bookmark screenshot](./screenshot.png)
+
 ## Features
 
 - Host-based folder recommendations (Top N) from existing bookmarks

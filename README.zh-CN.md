@@ -2,6 +2,8 @@
 
 一个 Chrome Manifest V3 扩展：在收藏页面时，根据现有书签推断最可能的文件夹（Top N），让收藏更快。
 
+![Smart Bookmark 截图](./screenshot.png)
+
 ## 功能概览
 
 - 基于 Host 的文件夹推荐（Top N）
