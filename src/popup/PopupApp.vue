@@ -41,6 +41,7 @@
             <div class="folder-icon">📁</div>
             <div class="folder-info">
               <span class="folder-name">{{ rec.folderTitle }}</span>
+              <span class="folder-path">{{ folderPathById[rec.folderId] ?? rec.folderTitle }}</span>
               <span class="folder-count">{{ rec.count }} items</span>
             </div>
             <div class="check-mark" v-if="selectedFolderId === rec.folderId">✓</div>
@@ -67,6 +68,16 @@
     <!-- 底部操作区 -->
     <footer class="footer">
       <div data-testid="save-status" class="visually-hidden">{{ saveStatus }}</div>
+      <div
+        v-if="duplicateLocations.length > 0"
+        data-testid="duplicate-warning"
+        class="status-message warning"
+      >
+        <div style="font-weight: 600; margin-bottom: 4px">Already bookmarked</div>
+        <div v-for="loc in duplicateLocations" :key="loc" style="opacity: 0.9">
+          • {{ loc }}
+        </div>
+      </div>
       <div v-if="saveStatus !== 'idle'" class="status-message" :class="saveStatus">
         <span v-if="saveStatus === 'saving'">⏳ Saving to bookmarks...</span>
         <span v-if="saveStatus === 'saved'">✅ Successfully saved!</span>
@@ -108,6 +119,7 @@ const selectedFolderId = ref<string>('');
 const allFolders = ref<Array<{ id: string; title: string; path: string }>>([]);
 const folderPathById = ref<Record<string, string>>({});
 const saveStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle');
+const duplicateLocations = ref<string[]>([]);
 
 const canSave = computed(() => pageUrl.value.length > 0 && selectedFolderId.value.length > 0);
 
@@ -166,6 +178,20 @@ async function loadRecommendations(): Promise<void> {
     limit: 3
   });
   selectedFolderId.value = recommendations.value[0]?.folderId ?? '';
+
+  try {
+    const existing = await promisify((cb) => chrome.bookmarks.search({ url: pageUrl.value }, cb));
+    const locs = new Set<string>();
+    for (const node of existing as any[]) {
+      const parentId = typeof node?.parentId === 'string' ? node.parentId : String(node?.parentId ?? '');
+      if (!parentId) continue;
+      const path = paths[parentId];
+      if (path) locs.add(path);
+    }
+    duplicateLocations.value = Array.from(locs).slice(0, 3);
+  } catch {
+    duplicateLocations.value = [];
+  }
 
   if (!selectedFolderId.value) {
     const last = await promisify<Record<string, unknown>>((cb) =>
@@ -382,6 +408,11 @@ onUnmounted(() => {
   color: var(--text-muted);
 }
 
+.folder-path {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 .check-mark {
   margin-left: auto;
   color: var(--primary-color);
@@ -454,6 +485,7 @@ onUnmounted(() => {
 .status-message.saved { color: #059669; background: #ecfdf5; }
 .status-message.error { color: #dc2626; background: #fef2f2; }
 .status-message.saving { color: var(--primary-color); }
+.status-message.warning { color: #92400e; background: #fffbeb; }
 
 .visually-hidden {
   position: absolute;

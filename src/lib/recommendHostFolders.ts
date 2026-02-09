@@ -1,3 +1,5 @@
+import { getDomain } from 'tldts';
+
 type BookmarkNode = {
   id: string;
   title: string;
@@ -75,8 +77,15 @@ export function recommendHostFolders(input: RecommendHostFoldersInput): HostFold
 
   let ranked = computeCountsForHost(input.bookmarksTree, targetHost);
   if (ranked.length === 0) {
-    const parent = parentDomainOnce(targetHost);
-    if (parent) ranked = computeCountsForHost(input.bookmarksTree, parent);
+    const domain = getDomain(targetHost);
+    if (domain && domain !== targetHost) {
+      ranked = computeCountsForHost(input.bookmarksTree, domain);
+    }
+
+    if (ranked.length === 0) {
+      const parent = parentDomainOnce(targetHost);
+      if (parent && parent !== domain) ranked = computeCountsForHost(input.bookmarksTree, parent);
+    }
   }
 
   return ranked.slice(0, input.limit);

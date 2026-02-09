@@ -91,4 +91,29 @@ describe('recommendHostFolders', () => {
     expect(result.map((r) => r.folderTitle)).toEqual(['Docs']);
     expect(result[0].count).toBe(1);
   });
+
+  it('falls back to registrable domain for deep subdomains (eTLD+1)', () => {
+    const tree: BookmarkNode[] = [
+      {
+        id: '0',
+        title: 'root',
+        children: [
+          {
+            id: '10',
+            title: 'Example',
+            children: [{ id: 'b1', title: 'e1', url: 'https://example.com/welcome' }]
+          }
+        ]
+      }
+    ];
+
+    const result = recommendHostFolders({
+      url: 'https://a.b.example.com/getting-started',
+      bookmarksTree: tree,
+      limit: 3
+    });
+
+    expect(result.map((r) => r.folderTitle)).toEqual(['Example']);
+    expect(result[0].count).toBe(1);
+  });
 });
