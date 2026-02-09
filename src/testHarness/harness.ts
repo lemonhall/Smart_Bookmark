@@ -36,6 +36,10 @@ async function findChildFolderByTitle(parentId: string, title: string): Promise<
   return children.find((c) => !c.url && c.title === title) ?? null;
 }
 
+async function getChildren(parentId: string): Promise<BookmarkNode[]> {
+  return promisify((cb) => chrome.bookmarks.getChildren(parentId, cb));
+}
+
 async function createFolder(parentId: string, title: string): Promise<string> {
   const node = await promisify((cb) => chrome.bookmarks.create({ parentId, title }, cb));
   return node.id;
@@ -87,6 +91,8 @@ declare global {
       createBookmark: (parentId: string, title: string, url: string) => Promise<string>;
       findBookmarksByUrl: (url: string) => Promise<BookmarkNode[]>;
       setLocalStorage: (items: Record<string, unknown>) => Promise<void>;
+      findChildFolderByTitle: (parentId: string, title: string) => Promise<BookmarkNode | null>;
+      getChildren: (parentId: string) => Promise<BookmarkNode[]>;
     };
   }
 }
@@ -97,5 +103,7 @@ window.__sbHarness = {
   createFolder,
   createBookmark,
   findBookmarksByUrl: searchByUrl,
-  setLocalStorage: storageSet
+  setLocalStorage: storageSet,
+  findChildFolderByTitle,
+  getChildren
 };

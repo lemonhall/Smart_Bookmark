@@ -225,3 +225,18 @@ AI 兜底推荐的 OpenAI 调用实现应复用 `openagentic-sdk-ts` 的 OpenAI 
 
 **验收（Acceptance）**
 - A1：`public/manifest.json` 包含 `https://api.openai.com/*` 的 host 权限声明。
+
+## 11. v7 增量需求（AI: Create Folder Suggestion）
+
+### REQ-020 AI 建议“新建文件夹并收藏”（P1）
+
+在 popup 中，AI 推荐除“选择现有文件夹”外，还可以给出“建议新建一个文件夹”的建议：
+- AI 输出可包含 `create` 建议：`{ parentFolderId, title }`
+- UI 清晰提示这是“将新建文件夹”，并展示父目录路径
+- 用户点击一次即可“新建文件夹 + 把当前页面收藏进去”（仍沿用现有 Save 按钮/回车保存）
+- 失败不阻塞：创建文件夹失败时，用户仍可选择现有文件夹保存
+
+**验收（Acceptance）**
+- A1：AI mock 响应返回 `create` 建议时，popup 能展示“Create folder …”卡片并可被选中。
+- A2：确认保存后：在建议的 `parentFolderId` 下创建新文件夹，并在该新文件夹内创建当前页面书签。
+- A3：Playwright E2E 覆盖：拦截 AI 响应，断言新文件夹与书签真实创建成功。

@@ -50,10 +50,28 @@
       </section>
 
       <!-- AI 推荐 -->
-      <section class="section" v-if="aiRecommendations.length > 0">
+      <section class="section" v-if="aiRecommendations.length > 0 || aiCreateSuggestion">
         <div class="section-header">
           <span class="label">AI Suggestions</span>
-          <span class="badge">{{ aiRecommendations.length }} found</span>
+          <span class="badge">{{ aiRecommendations.length + (aiCreateSuggestion ? 1 : 0) }} found</span>
+        </div>
+
+        <div v-if="aiCreateSuggestion" class="recommendation-grid" style="margin-bottom: 8px">
+          <label
+            class="recommendation-card"
+            :class="{ active: selectedCreate !== null }"
+            data-testid="ai-create-suggestion"
+            @click="selectCreateSuggestion"
+          >
+            <input type="radio" name="folder" :checked="selectedCreate !== null" class="hidden-radio" />
+            <div class="folder-icon">🆕</div>
+            <div class="folder-info">
+              <span class="folder-name">Create folder: {{ aiCreateSuggestion.title }}</span>
+              <span class="folder-path">Under: {{ aiCreateSuggestion.parentPath }}</span>
+              <span class="folder-count">AI suggestion</span>
+            </div>
+            <div class="check-mark" v-if="selectedCreate !== null">✓</div>
+          </label>
         </div>
 
         <div class="recommendation-grid">
@@ -125,10 +143,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { recommendHostFolders } from '../lib/recommendHostFolders';
 import { DEFAULT_SETTINGS, loadSettings, type SmartBookmarkSettings } from '../lib/settings';
-import { recommendAiFolderIds } from '../lib/aiRecommendFolders';
+import { recommendAiSuggestions, type AiCreateFolderSuggestion } from '../lib/aiRecommendFolders';
 
 // --- 保持逻辑不变 ---
 function getQueryParam(name: string): string | null {
@@ -150,14 +168,31 @@ type FolderRecommendation = {
 };
 const hostRecommendations = ref<FolderRecommendation[]>([]);
 const aiRecommendations = ref<Array<{ folderId: string; folderTitle: string }>>([]);
+const aiCreateSuggestion = ref<(AiCreateFolderSuggestion & { parentPath: string }) | null>(null);
 const selectedFolderId = ref<string>('');
 const allFolders = ref<Array<{ id: string; title: string; path: string }>>([]);
 const folderPathById = ref<Record<string, string>>({});
 const saveStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle');
 const duplicateLocations = ref<string[]>([]);
 const settings = ref<SmartBookmarkSettings>(DEFAULT_SETTINGS);
+const selectedCreate = ref<AiCreateFolderSuggestion | null>(null);
 
-const canSave = computed(() => pageUrl.value.length > 0 && selectedFolderId.value.length > 0);
+const canSave = computed(
+  () => pageUrl.value.length > 0 && (selectedFolderId.value.length > 0 || selectedCreate.value !== null)
+);
+
+watch(selectedFolderId, (next) => {
+  if (next && next.length > 0) selectedCreate.value = null;
+});
+
+function selectCreateSuggestion(): void {
+  if (!aiCreateSuggestion.value) return;
+  selectedCreate.value = {
+    parentFolderId: aiCreateSuggestion.value.parentFolderId,
+    title: aiCreateSuggestion.value.title
+  };
+  selectedFolderId.value = '';
+}
 
 async function loadPageContext(): Promise<void> {
   const urlOverride = getQueryParam('url');
@@ -231,7 +266,7 @@ async function loadRecommendations(): Promise<void> {
 
   if (shouldAskAi) {
     try {
-      const aiIds = await recommendAiFolderIds({
+      const ai = await recommendAiSuggestions({
         baseUrl: settings.value.ai.baseUrl,
         apiKey: settings.value.ai.apiKey,
         model: settings.value.ai.model,
@@ -241,20 +276,33 @@ async function loadRecommendations(): Promise<void> {
         folders: folders.map((f) => ({ id: f.id, path: f.path }))
       });
       const byId = new Map(folders.map((f) => [f.id, f] as const));
-      const aiRecs = aiIds
+      const aiRecs = ai.existingFolderIds
         .map((id) => byId.get(id))
         .filter(Boolean)
         .map((f) => ({ folderId: f!.id, folderTitle: f!.title }));
 
       aiRecommendations.value = aiRecs;
+
+      const create = ai.create;
+      if (create && byId.has(create.parentFolderId)) {
+        aiCreateSuggestion.value = {
+          ...create,
+          parentPath: paths[create.parentFolderId] ?? byId.get(create.parentFolderId)!.title
+        };
+      } else {
+        aiCreateSuggestion.value = null;
+      }
+
       if (hostRecommendations.value.length === 0 && aiRecs.length > 0) {
         selectedFolderId.value = aiRecs[0].folderId;
       }
     } catch {
       aiRecommendations.value = [];
+      aiCreateSuggestion.value = null;
     }
   } else {
     aiRecommendations.value = [];
+    aiCreateSuggestion.value = null;
   }
 
   try {
@@ -286,13 +334,26 @@ async function onSave(): Promise<void> {
   if (!canSave.value) return;
   saveStatus.value = 'saving';
   try {
+    let targetFolderId = selectedFolderId.value;
+    if (selectedCreate.value) {
+      const createdFolder = await promisify((cb) =>
+        chrome.bookmarks.create(
+          { parentId: selectedCreate.value!.parentFolderId, title: selectedCreate.value!.title },
+          cb
+        )
+      );
+      targetFolderId = String((createdFolder as any).id ?? '');
+    }
+
     await promisify((cb) =>
       chrome.bookmarks.create(
-        { parentId: selectedFolderId.value, title: pageTitle.value, url: pageUrl.value },
+        { parentId: targetFolderId, title: pageTitle.value, url: pageUrl.value },
         cb
       )
     );
-    await promisify((cb) => chrome.storage.local.set({ lastFolderId: selectedFolderId.value }, cb));
+    if (targetFolderId) {
+      await promisify((cb) => chrome.storage.local.set({ lastFolderId: targetFolderId }, cb));
+    }
     saveStatus.value = 'saved';
     if (settings.value.closeOnSave) {
       setTimeout(() => {

@@ -1,35 +1,59 @@
 import { describe, expect, it, vi } from 'vitest';
-import { parseAiFolderIds, recommendAiFolderIds } from './aiRecommendFolders';
+import { parseAiRecommendations, recommendAiSuggestions } from './aiRecommendFolders';
 
-describe('parseAiFolderIds', () => {
+describe('parseAiRecommendations', () => {
   it('parses plain JSON', () => {
-    expect(parseAiFolderIds('{"folderIds":["a","b"]}', 3)).toEqual(['a', 'b']);
+    expect(parseAiRecommendations('{"existingFolderIds":["a","b"],"create":null}', 3)).toEqual({
+      existingFolderIds: ['a', 'b'],
+      create: null
+    });
   });
 
   it('extracts JSON from mixed text', () => {
-    const text = 'Sure! {"folderIds":["x"]}\n';
-    expect(parseAiFolderIds(text, 3)).toEqual(['x']);
+    const text = 'Sure! {"existingFolderIds":["x"],"create":null}\n';
+    expect(parseAiRecommendations(text, 3)).toEqual({ existingFolderIds: ['x'], create: null });
   });
 
-  it('enforces topN', () => {
-    expect(parseAiFolderIds('{"folderIds":["a","b","c"]}', 2)).toEqual(['a', 'b']);
+  it('supports backward compat folderIds', () => {
+    expect(parseAiRecommendations('{"folderIds":["a","b"]}', 3)).toEqual({
+      existingFolderIds: ['a', 'b'],
+      create: null
+    });
+  });
+
+  it('parses create suggestion', () => {
+    expect(
+      parseAiRecommendations('{"existingFolderIds":["10"],"create":{"parentFolderId":"1","title":"Vue"}}', 3)
+    ).toEqual({
+      existingFolderIds: ['10'],
+      create: { parentFolderId: '1', title: 'Vue' }
+    });
   });
 
   it('returns empty for invalid payloads', () => {
-    expect(parseAiFolderIds('not json', 3)).toEqual([]);
-    expect(parseAiFolderIds('{"folderIds":"nope"}', 3)).toEqual([]);
+    expect(parseAiRecommendations('not json', 3)).toEqual({ existingFolderIds: [], create: null });
+    expect(parseAiRecommendations('{"existingFolderIds":"nope"}', 3)).toEqual({
+      existingFolderIds: [],
+      create: null
+    });
   });
 });
 
-describe('recommendAiFolderIds', () => {
-  it('posts minimal payload and parses folderIds', async () => {
+describe('recommendAiSuggestions', () => {
+  it('posts minimal payload and parses recommendations', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
+      status: 200,
       ok: true,
       json: async () => ({
         output: [
           {
             type: 'message',
-            content: [{ type: 'output_text', text: '{"folderIds":["10","11"]}' }]
+            content: [
+              {
+                type: 'output_text',
+                text: '{"existingFolderIds":["10"],"create":{"parentFolderId":"11","title":"Vue"}}'
+              }
+            ]
           }
         ]
       })
@@ -38,10 +62,10 @@ describe('recommendAiFolderIds', () => {
     globalThis.fetch = fetchMock;
 
     const leak = 'https://secret.example.com/private';
-    const result = await recommendAiFolderIds({
+    const result = await recommendAiSuggestions({
       baseUrl: 'https://api.openai.com/v1',
       apiKey: 'sk-test',
-      model: 'gpt-4o-mini',
+      model: 'gpt-5.2',
       topN: 3,
       pageUrl: 'https://unknown.example.com/docs/vue',
       pageTitle: 'Vue',
@@ -51,7 +75,11 @@ describe('recommendAiFolderIds', () => {
       ]
     });
 
-    expect(result).toEqual(['10', '11']);
+    expect(result).toEqual({
+      existingFolderIds: ['10'],
+      create: { parentFolderId: '11', title: 'Vue' }
+    });
+
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const call = fetchMock.mock.calls[0] as any[];
     const bodyText = call[1]?.body as string;
@@ -60,3 +88,4 @@ describe('recommendAiFolderIds', () => {
     expect(bodyText).toContain('"store":false');
   });
 });
+
