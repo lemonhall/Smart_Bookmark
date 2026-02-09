@@ -12,7 +12,8 @@
     "test": "npm run build:deps && vitest run",
     "test:watch": "npm run build:deps && vitest",
     "e2e": "npm run build:test && playwright test",
-    "e2e:ui": "npm run build:test && playwright test --ui"
+    "e2e:ui": "npm run build:test && playwright test --ui",
+    "package:zip": "npm run build && pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1"
   },
   "dependencies": {
     "@openagentic/providers-openai": "file:vendor/openagentic-sdk-ts/packages/providers-openai",

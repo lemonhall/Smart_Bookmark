@@ -39,6 +39,13 @@
 4. 打开 Developer mode（开发者模式）
 5. Load unpacked（加载已解压的扩展）→ 选择 `dist/`
 
+## 打包（zip）用于分享 / 上架
+
+把 `dist/` 里的内容打成 zip（zip 根目录应直接包含 `manifest.json`）：
+
+- Windows（PowerShell）：`Compress-Archive -Path dist\\* -DestinationPath smart-bookmark.zip -Force`
+- 或者运行：`npm run package:zip` → 输出 `artifacts/smart-bookmark.zip`
+
 ## 快捷键
 
 - 默认：`Ctrl+Shift+Y`（可在 `chrome://extensions/shortcuts` 自己改）
@@ -47,6 +54,10 @@
 
 - 打开扩展设置页可配置 Top N / 保存后是否自动关闭 / AI 兜底推荐。
 - 如果 AI 的 `Base URL` 是不同域名，Chrome 需要对应 host 权限；你在设置页点击保存时会弹窗请求授权。
+
+## 隐私
+
+- 见 `PRIVACY.zh-CN.md`
 
 ## 目录速览
 

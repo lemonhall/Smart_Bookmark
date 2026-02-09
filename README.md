@@ -39,6 +39,13 @@ Note: `npm run e2e` rebuilds `dist/` in test mode. Run `npm run build` to restor
 4. Enable Developer mode
 5. Load unpacked → select `dist/`
 
+## Package (zip) for sharing / Chrome Web Store
+
+You can zip the contents of `dist/` (the zip should contain `manifest.json` at the root):
+
+- Windows (PowerShell): `Compress-Archive -Path dist\\* -DestinationPath smart-bookmark.zip -Force`
+- Or run: `npm run package:zip` → outputs `artifacts/smart-bookmark.zip`
+
 ## Shortcut
 
 - Default command: `Ctrl+Shift+Y` (you can change it at `chrome://extensions/shortcuts`)
@@ -47,6 +54,10 @@ Note: `npm run e2e` rebuilds `dist/` in test mode. Run `npm run build` to restor
 
 - Open the extension options page to configure Top N / close-on-save / AI fallback.
 - If your AI `Base URL` uses a different domain, Chrome needs host permission for it. The options page will request it on save.
+
+## Privacy
+
+- See `PRIVACY.md`
 
 ## Repo map
 

@@ -275,3 +275,32 @@ AI 兜底推荐的 OpenAI 调用实现应复用 `openagentic-sdk-ts` 的 OpenAI 
 - A1：选中 create 建议后，popup 展示“Folder name / Parent folder”的编辑控件并可修改。
 - A2：保存后新建文件夹出现在用户选择的父目录下，且书签位于新建文件夹内。
 - A3：Playwright E2E 覆盖：mock AI create 建议 → 修改标题/父目录 → 保存成功并断言结构正确。
+
+## 14. v10 增量需求（Store Readiness）
+
+### REQ-023 Manifest 完整性（P0）
+
+为满足 Chrome Web Store 要求，manifest 至少包含：
+- `description`
+- `icons`（至少 16/48/128）
+- `action.default_icon`（与 icons 对齐）
+
+**验收（Acceptance）**
+- A1：`dist/manifest.json` 包含 `description` 与 `icons`。
+- A2：扩展在 `chrome://extensions` 中显示自定义图标（非默认字母图标）。
+
+### REQ-024 隐私政策（P0）
+
+仓库提供隐私政策文档（中英文），内容需与扩展行为一致（尤其是 AI 可选网络请求、发送的数据字段）。
+
+**验收（Acceptance）**
+- A1：存在 `PRIVACY.md` 与 `PRIVACY.zh-CN.md`。
+- A2：明确声明：不开启 AI 时无网络请求；开启 AI 时仅发送当前页面信息 + 文件夹候选，不上传已有书签 URL 列表，不做遥测。
+
+### REQ-025 打包与安装指引（P0）
+
+提供面向普通用户的安装说明与打包指引（不要求安装 Node）。
+
+**验收（Acceptance）**
+- A1：README（中英文）包含“直接使用仓库内 dist 安装”的步骤。
+- A2：提供一个打包脚本/说明生成上传用 zip（例如 `dist/` 打包）。
