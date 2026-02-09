@@ -173,17 +173,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* 变量定义 */
-:host {
-  --primary-color: #2563eb;
-  --primary-hover: #1d4ed8;
-  --bg-color: #ffffff;
-  --text-main: #1f2937;
-  --text-muted: #6b7280;
-  --border-color: #e5e7eb;
-  --radius: 8px;
-}
-
 .popup-container,
 :global(html),
 :global(body),
@@ -192,6 +181,15 @@ onMounted(async () => {
 }
 
 .popup-container {
+  /* 变量定义（放在真实元素上，避免 :host 不生效导致 var() 变透明） */
+  --primary-color: #2563eb;
+  --primary-hover: #1d4ed8;
+  --bg-color: #ffffff;
+  --text-main: #1f2937;
+  --text-muted: #6b7280;
+  --border-color: #e5e7eb;
+  --radius: 8px;
+
   min-height: 100vh;
 }
 
@@ -374,7 +372,7 @@ onMounted(async () => {
 .save-button {
   width: 100%;
   padding: 10px;
-  background: var(--primary-color);
+  background: var(--primary-color, #2563eb);
   color: white;
   border: none;
   border-radius: var(--radius);
@@ -385,7 +383,7 @@ onMounted(async () => {
 }
 
 .save-button:hover:not(:disabled) {
-  background: var(--primary-hover);
+  background: var(--primary-hover, #1d4ed8);
 }
 
 .save-button:disabled {
