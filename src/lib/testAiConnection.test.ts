@@ -48,5 +48,31 @@ describe('testAiConnection', () => {
     expect(init?.headers?.authorization ?? init?.headers?.Authorization).toContain('Bearer ');
     expect(init?.credentials).toBe('omit');
   });
-});
 
+  it('supports SSE gateways that return event-stream for non-stream requests', async () => {
+    async function* sseBody() {
+      yield 'event: response.output_text.delta\n';
+      yield 'data: {"type":"response.output_text.delta","delta":"Hello world."}\n';
+      yield '\n';
+      yield 'data: [DONE]\n';
+      yield '\n';
+    }
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      headers: { get: () => 'text/event-stream' },
+      body: sseBody()
+    });
+    // @ts-expect-error test stub
+    globalThis.fetch = fetchMock;
+
+    const res = await testAiConnection({
+      baseUrl: 'https://www.right.codes/v1',
+      apiKey: 'sk-test',
+      model: 'gpt-5.2'
+    });
+
+    expect(res).toEqual({ ok: true, assistantText: 'Hello world.' });
+  });
+});

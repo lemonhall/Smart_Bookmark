@@ -42,6 +42,110 @@ function parseAssistantText(output: unknown): string | null {
   return parts.length ? parts.join("") : null;
 }
 
+async function completeFromSse(res: any): Promise<{
+  assistantText: string | null;
+  toolCalls: Array<{ toolUseId: string; name: string; input: Record<string, unknown> }>;
+  usage?: Record<string, unknown>;
+  raw: unknown;
+  responseId: string | null;
+}> {
+  const ongoing = new Map<number, { callId: string; name: string; arguments: string }>();
+  let responseId: string | null = null;
+  let usage: Record<string, unknown> | undefined;
+  const textParts: string[] = [];
+  const toolCalls: Array<{ toolUseId: string; name: string; input: Record<string, unknown> }> = [];
+  let completedResponse: any = null;
+
+  for await (const data of parseSseData(res?.body)) {
+    if (data.trim() === "[DONE]") break;
+
+    let obj: any;
+    try {
+      obj = JSON.parse(data);
+    } catch {
+      continue;
+    }
+    if (!obj || typeof obj !== "object") continue;
+
+    const rid0 = obj.response_id;
+    if (typeof rid0 === "string" && rid0) responseId = rid0;
+
+    const typ = obj.type;
+    if (typ === "response.created") {
+      const rid = obj.response?.id;
+      if (typeof rid === "string" && rid) responseId = rid;
+      continue;
+    }
+
+    if (typ === "response.output_text.delta") {
+      const delta = obj.delta;
+      if (typeof delta === "string" && delta) textParts.push(delta);
+      continue;
+    }
+
+    if (typ === "response.output_item.added") {
+      const outputIndex = obj.output_index;
+      const item = obj.item;
+      if (typeof outputIndex === "number" && item && typeof item === "object" && item.type === "function_call") {
+        const callId = item.call_id;
+        const name = item.name;
+        if (typeof callId === "string" && callId && typeof name === "string" && name) {
+          ongoing.set(outputIndex, { callId, name, arguments: "" });
+        }
+      }
+      continue;
+    }
+
+    if (typ === "response.function_call_arguments.delta") {
+      const outputIndex = obj.output_index;
+      const delta = obj.delta;
+      if (typeof outputIndex === "number" && typeof delta === "string") {
+        const st = ongoing.get(outputIndex);
+        if (st) st.arguments += delta;
+      }
+      continue;
+    }
+
+    if (typ === "response.output_item.done") {
+      const outputIndex = obj.output_index;
+      const item = obj.item;
+      if (typeof outputIndex === "number" && item && typeof item === "object" && item.type === "function_call") {
+        const st = ongoing.get(outputIndex);
+        const callId = (st?.callId ?? item.call_id) as unknown;
+        const name = (st?.name ?? item.name) as unknown;
+        const args = (st?.arguments ?? item.arguments ?? "") as unknown;
+        if (typeof callId === "string" && callId && typeof name === "string" && name) {
+          toolCalls.push({ toolUseId: callId, name, input: parseToolArguments(args) });
+        }
+      }
+      continue;
+    }
+
+    if (typ === "response.completed") {
+      completedResponse = obj.response ?? null;
+      const rid = obj.response?.id;
+      if (typeof rid === "string" && rid) responseId = rid;
+      const u = obj.response?.usage;
+      if (u && typeof u === "object") usage = u as Record<string, unknown>;
+      continue;
+    }
+  }
+
+  let assistantText = textParts.length ? textParts.join("") : null;
+  if (!assistantText && completedResponse) {
+    const outputItems = Array.isArray(completedResponse?.output) ? completedResponse.output : [];
+    assistantText = parseAssistantText(outputItems);
+  }
+
+  return {
+    assistantText,
+    toolCalls,
+    usage,
+    raw: completedResponse ?? { stream: true },
+    responseId
+  };
+}
+
 export class OpenAIResponsesProvider implements ModelProvider {
   readonly name = "openai-responses";
   readonly #baseUrl: string;
@@ -90,31 +194,63 @@ export class OpenAIResponsesProvider implements ModelProvider {
     });
     if ((res as any).status >= 400) throw new Error(`OpenAIResponsesProvider: HTTP ${(res as any).status}`);
 
-    const obj = (await (res as any).json()) as any;
-    const outputItems = Array.isArray(obj?.output) ? obj.output : [];
+    const contentType =
+      (res as any)?.headers && typeof (res as any).headers.get === "function"
+        ? String((res as any).headers.get("content-type") ?? "")
+        : "";
 
-    const assistantText = parseAssistantText(outputItems);
-
-    const toolCalls: Array<{ toolUseId: string; name: string; input: Record<string, unknown> }> = [];
-    for (const item of outputItems) {
-      if (!item || typeof item !== "object") continue;
-      const it = item as any;
-      if (it.type !== "function_call") continue;
-      const callId = it.call_id;
-      const name = it.name;
-      if (typeof callId !== "string" || !callId) continue;
-      if (typeof name !== "string" || !name) continue;
-      toolCalls.push({ toolUseId: callId, name, input: parseToolArguments(it.arguments) });
+    if (contentType.includes("text/event-stream")) {
+      const sse = await completeFromSse(res as any);
+      return {
+        assistantText: sse.assistantText,
+        toolCalls: sse.toolCalls,
+        usage: sse.usage,
+        raw: sse.raw,
+        responseId: sse.responseId,
+        providerMetadata: undefined,
+      };
     }
 
-    return {
-      assistantText,
-      toolCalls,
-      usage: obj?.usage && typeof obj.usage === "object" ? (obj.usage as Record<string, unknown>) : undefined,
-      raw: obj,
-      responseId: typeof obj?.id === "string" ? obj.id : null,
-      providerMetadata: undefined,
-    };
+    // Some OpenAI-compatible gateways stream SSE even when `stream` is not requested.
+    // Try JSON first (on a clone if possible), then fall back to SSE parsing on the original body.
+    const jsonTarget = typeof (res as any).clone === "function" ? (res as any).clone() : (res as any);
+    try {
+      const obj = (await jsonTarget.json()) as any;
+      const outputItems = Array.isArray(obj?.output) ? obj.output : [];
+
+      const assistantText = parseAssistantText(outputItems);
+
+      const toolCalls: Array<{ toolUseId: string; name: string; input: Record<string, unknown> }> = [];
+      for (const item of outputItems) {
+        if (!item || typeof item !== "object") continue;
+        const it = item as any;
+        if (it.type !== "function_call") continue;
+        const callId = it.call_id;
+        const name = it.name;
+        if (typeof callId !== "string" || !callId) continue;
+        if (typeof name !== "string" || !name) continue;
+        toolCalls.push({ toolUseId: callId, name, input: parseToolArguments(it.arguments) });
+      }
+
+      return {
+        assistantText,
+        toolCalls,
+        usage: obj?.usage && typeof obj.usage === "object" ? (obj.usage as Record<string, unknown>) : undefined,
+        raw: obj,
+        responseId: typeof obj?.id === "string" ? obj.id : null,
+        providerMetadata: undefined,
+      };
+    } catch {
+      const sse = await completeFromSse(res as any);
+      return {
+        assistantText: sse.assistantText,
+        toolCalls: sse.toolCalls,
+        usage: sse.usage,
+        raw: sse.raw,
+        responseId: sse.responseId,
+        providerMetadata: undefined,
+      };
+    }
   }
 
   async *stream(req: ModelCompleteRequest): AsyncIterable<ModelStreamEvent> {
