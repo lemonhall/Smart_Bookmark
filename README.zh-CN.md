@@ -19,12 +19,23 @@
 - 构建扩展：`npm run build`（输出到 `dist/`）
 - 测试构建（E2E 用，包含 harness）：`npm run build:test`（输出到 `dist/`）
 
+注意：`npm run e2e` 会用测试模式重建 `dist/`。如果你想恢复发布用的 `dist/`，再跑一次 `npm run build`。
+
 ## 在 Chrome 里加载（unpacked）
 
-1. `npm run build`
-2. 打开 `chrome://extensions`
-3. 打开 Developer mode（开发者模式）
-4. Load unpacked（加载已解压的扩展）→ 选择 `dist/`
+### 方式 A（推荐）：直接使用仓库内的 `dist/`
+
+1. 打开 `chrome://extensions`
+2. 打开 Developer mode（开发者模式）
+3. Load unpacked（加载已解压的扩展）→ 选择 `dist/`
+
+### 方式 B：本地构建
+
+1. `npm install`
+2. `npm run build`
+3. 打开 `chrome://extensions`
+4. 打开 Developer mode（开发者模式）
+5. Load unpacked（加载已解压的扩展）→ 选择 `dist/`
 
 ## 快捷键
 

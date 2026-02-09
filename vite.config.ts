@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       emptyOutDir: true,
-      sourcemap: true,
+      sourcemap: includeHarness,
       rollupOptions: {
         input: {
           popup: 'popup.html',

@@ -19,12 +19,23 @@ Chrome Manifest V3 extension that recommends bookmark folders for the current pa
 - Build extension: `npm run build` → outputs `dist/`
 - Build (E2E/test mode): `npm run build:test` → outputs `dist/` with harness
 
+Note: `npm run e2e` rebuilds `dist/` in test mode. Run `npm run build` to restore the production `dist/`.
+
 ## Load in Chrome
 
-1. `npm run build`
-2. Open `chrome://extensions`
-3. Enable Developer mode
-4. Load unpacked → select `dist/`
+### Option A (recommended): use the committed `dist/`
+
+1. Open `chrome://extensions`
+2. Enable Developer mode
+3. Load unpacked → select `dist/`
+
+### Option B: build locally
+
+1. `npm install`
+2. `npm run build`
+3. Open `chrome://extensions`
+4. Enable Developer mode
+5. Load unpacked → select `dist/`
 
 ## Shortcut
 

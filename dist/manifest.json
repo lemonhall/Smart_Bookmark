@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Smart Bookmark",
+  "version": "0.1.0",
+  "action": {
+    "default_title": "Smart Bookmark",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "host_permissions": ["https://api.openai.com/*", "https://www.right.codes/*"],
+  "optional_host_permissions": ["https://*/*"],
+  "permissions": ["bookmarks", "tabs", "activeTab", "storage"],
+  "commands": {
+    "open-smart-bookmark": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      },
+      "description": "Open Smart Bookmark"
+    }
+  }
+}
