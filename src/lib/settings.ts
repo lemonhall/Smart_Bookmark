@@ -19,7 +19,7 @@ export const DEFAULT_SETTINGS: SmartBookmarkSettings = {
   ai: {
     enabled: false,
     baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-4o-mini',
+    model: 'gpt-5.2',
     apiKey: ''
   }
 };

@@ -45,7 +45,7 @@
 
       <div class="row">
         <label class="label" for="model">Model</label>
-        <input id="model" class="input" type="text" placeholder="gpt-4o-mini" v-model.trim="model" />
+        <input id="model" class="input" type="text" placeholder="gpt-5.2" v-model.trim="model" />
       </div>
 
       <div class="row">
@@ -69,6 +69,9 @@
     <footer class="footer">
       <div class="status" :class="status.kind" v-if="status.kind !== 'idle'">{{ status.message }}</div>
       <div class="actions">
+        <button class="button secondary" type="button" @click="onTest" :disabled="saving">
+          {{ saving ? 'Working…' : 'Test' }}
+        </button>
         <button class="button secondary" type="button" @click="onReset" :disabled="saving">Reset</button>
         <button class="button" type="button" @click="onSave" :disabled="saving">
           {{ saving ? 'Saving…' : 'Save' }}
@@ -81,6 +84,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings } from '../lib/settings';
+import { testAiConnection } from '../lib/testAiConnection';
 
 const topN = ref<number>(DEFAULT_SETTINGS.topN);
 const closeOnSave = ref<boolean>(DEFAULT_SETTINGS.closeOnSave);
@@ -166,6 +170,31 @@ async function onSave() {
     setStatus('ok', aiEnabled.value ? 'Saved (AI enabled)' : 'Saved');
   } catch {
     setStatus('error', 'Save failed');
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function onTest() {
+  saving.value = true;
+  setStatus('idle', '');
+  try {
+    const okPerm = await ensureHostPermissionForBaseUrl();
+    if (!okPerm) return;
+
+    const res = await testAiConnection({
+      baseUrl: baseUrl.value,
+      apiKey: apiKey.value,
+      model: model.value
+    });
+
+    if (!res.ok) {
+      setStatus('error', `Test failed: ${res.error}`);
+      return;
+    }
+    setStatus('ok', `OK: ${res.assistantText}`);
+  } catch {
+    setStatus('error', 'Test failed');
   } finally {
     saving.value = false;
   }
