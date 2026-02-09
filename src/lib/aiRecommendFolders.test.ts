@@ -62,6 +62,8 @@ describe('recommendAiSuggestions', () => {
     globalThis.fetch = fetchMock;
 
     const leak = 'https://secret.example.com/private';
+    const metaDescription = 'This is a test description';
+    const ogTitle = 'OG Title';
     const result = await recommendAiSuggestions({
       baseUrl: 'https://api.openai.com/v1',
       apiKey: 'sk-test',
@@ -69,6 +71,13 @@ describe('recommendAiSuggestions', () => {
       topN: 3,
       pageUrl: 'https://unknown.example.com/docs/vue',
       pageTitle: 'Vue',
+      pageSignals: {
+        metaDescription,
+        ogTitle,
+        ogDescription: '',
+        canonicalUrl: 'https://unknown.example.com/docs/vue',
+        h1: 'Vue'
+      },
       folders: [
         { id: '10', path: '书签栏 / 前端' },
         { id: '11', path: '书签栏 / Linux' }
@@ -84,8 +93,9 @@ describe('recommendAiSuggestions', () => {
     const call = fetchMock.mock.calls[0] as any[];
     const bodyText = call[1]?.body as string;
     expect(bodyText).toContain('https://unknown.example.com/docs/vue');
+    expect(bodyText).toContain(metaDescription);
+    expect(bodyText).toContain(ogTitle);
     expect(bodyText).not.toContain(leak);
     expect(bodyText).toContain('"store":false');
   });
 });
-

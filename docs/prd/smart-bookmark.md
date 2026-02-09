@@ -240,3 +240,21 @@ AI 兜底推荐的 OpenAI 调用实现应复用 `openagentic-sdk-ts` 的 OpenAI 
 - A1：AI mock 响应返回 `create` 建议时，popup 能展示“Create folder …”卡片并可被选中。
 - A2：确认保存后：在建议的 `parentFolderId` 下创建新文件夹，并在该新文件夹内创建当前页面书签。
 - A3：Playwright E2E 覆盖：拦截 AI 响应，断言新文件夹与书签真实创建成功。
+
+## 12. v8 增量需求（Page Signals for AI）
+
+### REQ-021 页面信息采集（Meta/OG/Canonical/H1）（P0）
+
+当用户开启 AI 时，popup 在不新增网络请求的前提下，从当前页面采集用于语义判断的最小信息集（Page Signals），至少包含：
+- `meta description`
+- `og:title`
+- `og:description`
+- `canonical`（`<link rel="canonical">`）
+- `H1`（取第一个非空 `h1` 文本）
+
+采集方式：使用 `chrome.scripting.executeScript` 在 active tab 页面上下文执行读取 DOM 的脚本。
+
+**验收（Acceptance）**
+- A1：扩展 manifest 包含使用 `chrome.scripting` 所需权限。
+- A2：当 AI 开启时，AI 请求 payload 包含上述 Page Signals 字段（若缺失则为空/省略，但字段命名一致）。
+- A3：E2E/单测可断言：AI payload 仍不包含任意“已存在书签 URL 列表”（只包含 folder candidates + 当前页 signals）。

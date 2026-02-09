@@ -1,4 +1,5 @@
 import { OpenAIResponsesProvider } from '@openagentic/providers-openai';
+import type { PageSignals } from './pageSignals';
 
 export type AiFolderCandidate = {
   id: string;
@@ -12,6 +13,7 @@ export type AiRecommendFoldersInput = {
   topN: number;
   pageUrl: string;
   pageTitle: string;
+  pageSignals?: PageSignals | null;
   folders: AiFolderCandidate[];
 };
 
@@ -90,7 +92,11 @@ export async function recommendAiFolderIds(input: AiRecommendFoldersInput): Prom
 
   const promptPayload = {
     topN,
-    page: { url: input.pageUrl, title: input.pageTitle },
+    page: {
+      url: input.pageUrl,
+      title: input.pageTitle,
+      signals: input.pageSignals ?? null
+    },
     folders: input.folders
   };
 
@@ -130,7 +136,11 @@ export async function recommendAiSuggestions(
   const provider = new OpenAIResponsesProvider({ baseUrl });
   const promptPayload = {
     topN,
-    page: { url: input.pageUrl, title: input.pageTitle },
+    page: {
+      url: input.pageUrl,
+      title: input.pageTitle,
+      signals: input.pageSignals ?? null
+    },
     folders: input.folders
   };
 

@@ -147,6 +147,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { recommendHostFolders } from '../lib/recommendHostFolders';
 import { DEFAULT_SETTINGS, loadSettings, type SmartBookmarkSettings } from '../lib/settings';
 import { recommendAiSuggestions, type AiCreateFolderSuggestion } from '../lib/aiRecommendFolders';
+import { sanitizePageSignals, type PageSignals } from '../lib/pageSignals';
 
 // --- 保持逻辑不变 ---
 function getQueryParam(name: string): string | null {
@@ -176,6 +177,7 @@ const saveStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle');
 const duplicateLocations = ref<string[]>([]);
 const settings = ref<SmartBookmarkSettings>(DEFAULT_SETTINGS);
 const selectedCreate = ref<AiCreateFolderSuggestion | null>(null);
+const pageSignals = ref<PageSignals | null>(null);
 
 const canSave = computed(
   () => pageUrl.value.length > 0 && (selectedFolderId.value.length > 0 || selectedCreate.value !== null)
@@ -213,6 +215,50 @@ async function loadRecommendations(): Promise<void> {
     settings.value = await loadSettings();
   } catch {
     settings.value = DEFAULT_SETTINGS;
+  }
+
+  const hasOverrides = Boolean(getQueryParam('url') || getQueryParam('title'));
+  const shouldReadSignals =
+    settings.value.ai.enabled &&
+    !hasOverrides;
+
+  if (shouldReadSignals) {
+    try {
+      const tabs = await promisify((cb) => chrome.tabs.query({ active: true, currentWindow: true }, cb));
+      const tabId = tabs[0]?.id;
+      if (typeof tabId === 'number') {
+        const injected = await promisify((cb) =>
+          chrome.scripting.executeScript(
+            {
+              target: { tabId },
+              func: () => {
+                const qMeta = (propOrName: string, kind: 'property' | 'name'): string => {
+                  const el = document.querySelector(`meta[${kind}="${propOrName}"]`);
+                  const content = (el as any)?.content;
+                  return typeof content === 'string' ? content : '';
+                };
+                const canonical = (document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null)?.href ?? '';
+                const h1 = (document.querySelector('h1') as HTMLElement | null)?.innerText ?? '';
+                return {
+                  metaDescription: qMeta('description', 'name'),
+                  ogTitle: qMeta('og:title', 'property'),
+                  ogDescription: qMeta('og:description', 'property'),
+                  canonicalUrl: canonical,
+                  h1
+                };
+              }
+            },
+            cb
+          )
+        );
+        const raw = Array.isArray(injected) ? (injected[0] as any)?.result : null;
+        pageSignals.value = sanitizePageSignals(raw);
+      }
+    } catch {
+      pageSignals.value = null;
+    }
+  } else {
+    pageSignals.value = null;
   }
 
   const tree = await promisify((cb) => chrome.bookmarks.getTree(cb));
@@ -273,6 +319,7 @@ async function loadRecommendations(): Promise<void> {
         topN: settings.value.topN,
         pageUrl: pageUrl.value,
         pageTitle: pageTitle.value,
+        pageSignals: pageSignals.value,
         folders: folders.map((f) => ({ id: f.id, path: f.path }))
       });
       const byId = new Map(folders.map((f) => [f.id, f] as const));
