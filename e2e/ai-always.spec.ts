@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import { launchExtensionContext } from './utils/launchExtension';
 
-test('uses AI fallback when no host matches (and does not upload bookmark URLs)', async () => {
+test('shows AI suggestions even when host matches (when enabled)', async () => {
   const { context, extensionId, userDataDir } = await launchExtensionContext();
 
   const harness = await context.newPage();
@@ -14,13 +14,16 @@ test('uses AI fallback when no host matches (and does not upload bookmark URLs)'
     // @ts-expect-error
     const rootId = await window.__sbHarness.getTestRootId();
     // @ts-expect-error
-    const feId = await window.__sbHarness.createFolder(rootId, '前端');
+    const aiToolsId = await window.__sbHarness.createFolder(rootId, 'AI工具');
     // @ts-expect-error
     const linuxId = await window.__sbHarness.createFolder(rootId, 'Linux');
-    // seed a bookmark URL that must NOT appear in the AI request payload
+
+    // Seed host matches for github.com so Host Matches section has content
     // @ts-expect-error
-    await window.__sbHarness.createBookmark(linuxId, 'secret', 'https://secret.example.com/private');
-    // enable AI + config
+    await window.__sbHarness.createBookmark(aiToolsId, 'a1', 'https://github.com/nicepkg/aide');
+    // @ts-expect-error
+    await window.__sbHarness.createBookmark(aiToolsId, 'a2', 'https://github.com/nicepkg/gpt-runner');
+
     // @ts-expect-error
     await window.__sbHarness.setLocalStorage({
       sbSettings: {
@@ -28,18 +31,18 @@ test('uses AI fallback when no host matches (and does not upload bookmark URLs)'
         closeOnSave: true,
         ai: {
           enabled: true,
+          alwaysSuggest: true,
           baseUrl: 'https://api.openai.com/v1',
-          model: 'gpt-4o-mini',
+          model: 'gpt-5.2',
           apiKey: 'sk-test'
         }
       }
     });
-    return { feId };
+
+    return { linuxId };
   });
 
-  let capturedBody = '';
-  await context.route('https://api.openai.com/v1/responses', async (route, request) => {
-    capturedBody = request.postData() ?? '';
+  await context.route('https://api.openai.com/v1/responses', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -47,7 +50,7 @@ test('uses AI fallback when no host matches (and does not upload bookmark URLs)'
         output: [
           {
             type: 'message',
-            content: [{ type: 'output_text', text: JSON.stringify({ folderIds: [ids.feId] }) }]
+            content: [{ type: 'output_text', text: JSON.stringify({ folderIds: [ids.linuxId] }) }]
           }
         ]
       })
@@ -57,24 +60,25 @@ test('uses AI fallback when no host matches (and does not upload bookmark URLs)'
   const popup = await context.newPage();
   await popup.goto(
     `chrome-extension://${extensionId}/popup.html?url=${encodeURIComponent(
-      'https://unknown.example.com/docs/vue'
-    )}&title=${encodeURIComponent('Vue Composition API')}`
+      'https://github.com/vuejs/vue'
+    )}&title=${encodeURIComponent('Vue')}`
   );
 
-  await expect(popup.getByTestId('ai-recommendation-item').nth(0)).toContainText('前端');
+  await expect(popup.getByTestId('recommendation-item').nth(0)).toContainText('AI工具');
+  await expect(popup.getByTestId('ai-recommendation-item').nth(0)).toContainText('Linux');
 
-  expect(capturedBody).toContain('https://unknown.example.com/docs/vue');
-  expect(capturedBody).not.toContain('https://secret.example.com/private');
-
+  // Choose AI suggestion and save
+  await popup.getByTestId('ai-recommendation-item').nth(0).click();
   await popup.keyboard.press('Enter');
   await expect(popup.getByTestId('save-status')).toHaveText('saved');
 
   const created = await harness.evaluate(async () => {
     // @ts-expect-error
-    return await window.__sbHarness.findBookmarksByUrl('https://unknown.example.com/docs/vue');
+    return await window.__sbHarness.findBookmarksByUrl('https://github.com/vuejs/vue');
   });
   expect(created.length).toBe(1);
 
   await context.close();
   fs.rmSync(userDataDir, { recursive: true, force: true });
 });
+

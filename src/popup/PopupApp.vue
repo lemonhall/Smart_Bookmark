@@ -21,17 +21,17 @@
       <!-- 推荐文件夹 -->
       <section class="section">
         <div class="section-header">
-          <span class="label">Recommended Folders</span>
-          <span class="badge" v-if="recommendations.length">{{ recommendations.length }} found</span>
+          <span class="label">Host Matches</span>
+          <span class="badge" v-if="hostRecommendations.length">{{ hostRecommendations.length }} found</span>
         </div>
         
-        <div v-if="recommendations.length === 0" class="empty-state">
+        <div v-if="hostRecommendations.length === 0" class="empty-state">
           No host matches
         </div>
         
         <div class="recommendation-grid">
           <label
-            v-for="rec in recommendations"
+            v-for="rec in hostRecommendations"
             :key="rec.folderId"
             class="recommendation-card"
             :class="{ active: selectedFolderId === rec.folderId }"
@@ -42,8 +42,34 @@
             <div class="folder-info">
               <span class="folder-name">{{ rec.folderTitle }}</span>
               <span class="folder-path">{{ folderPathById[rec.folderId] ?? rec.folderTitle }}</span>
-              <span v-if="rec.source === 'host'" class="folder-count">{{ rec.count }} items</span>
-              <span v-else class="folder-count">AI suggestion</span>
+              <span class="folder-count">{{ rec.count }} items</span>
+            </div>
+            <div class="check-mark" v-if="selectedFolderId === rec.folderId">✓</div>
+          </label>
+        </div>
+      </section>
+
+      <!-- AI 推荐 -->
+      <section class="section" v-if="aiRecommendations.length > 0">
+        <div class="section-header">
+          <span class="label">AI Suggestions</span>
+          <span class="badge">{{ aiRecommendations.length }} found</span>
+        </div>
+
+        <div class="recommendation-grid">
+          <label
+            v-for="rec in aiRecommendations"
+            :key="rec.folderId"
+            class="recommendation-card"
+            :class="{ active: selectedFolderId === rec.folderId }"
+            data-testid="ai-recommendation-item"
+          >
+            <input type="radio" name="folder" :value="rec.folderId" v-model="selectedFolderId" class="hidden-radio" />
+            <div class="folder-icon">✨</div>
+            <div class="folder-info">
+              <span class="folder-name">{{ rec.folderTitle }}</span>
+              <span class="folder-path">{{ folderPathById[rec.folderId] ?? rec.folderTitle }}</span>
+              <span class="folder-count">AI suggestion</span>
             </div>
             <div class="check-mark" v-if="selectedFolderId === rec.folderId">✓</div>
           </label>
@@ -120,10 +146,10 @@ const pageTitle = ref<string>('');
 type FolderRecommendation = {
   folderId: string;
   folderTitle: string;
-  source: 'host' | 'ai';
   count?: number;
 };
-const recommendations = ref<FolderRecommendation[]>([]);
+const hostRecommendations = ref<FolderRecommendation[]>([]);
+const aiRecommendations = ref<Array<{ folderId: string; folderTitle: string }>>([]);
 const selectedFolderId = ref<string>('');
 const allFolders = ref<Array<{ id: string; title: string; path: string }>>([]);
 const folderPathById = ref<Record<string, string>>({});
@@ -193,28 +219,43 @@ async function loadRecommendations(): Promise<void> {
     bookmarksTree: tree as any,
     limit: settings.value.topN
   });
-  recommendations.value = hostRecs.map((r) => ({ ...r, source: 'host' as const }));
+  hostRecommendations.value = hostRecs.map((r) => ({ folderId: r.folderId, folderTitle: r.folderTitle, count: r.count }));
+  selectedFolderId.value = hostRecommendations.value[0]?.folderId ?? '';
 
-  if (recommendations.value.length === 0 && settings.value.ai.enabled) {
-    const aiIds = await recommendAiFolderIds({
-      baseUrl: settings.value.ai.baseUrl,
-      apiKey: settings.value.ai.apiKey,
-      model: settings.value.ai.model,
-      topN: settings.value.topN,
-      pageUrl: pageUrl.value,
-      pageTitle: pageTitle.value,
-      folders: folders.map((f) => ({ id: f.id, path: f.path }))
-    });
-    const byId = new Map(folders.map((f) => [f.id, f] as const));
-    const aiRecs = aiIds
-      .map((id) => byId.get(id))
-      .filter(Boolean)
-      .map((f) => ({ folderId: f!.id, folderTitle: f!.title, source: 'ai' as const }));
+  const shouldAskAi =
+    settings.value.ai.enabled &&
+    settings.value.ai.apiKey.trim().length > 0 &&
+    settings.value.ai.baseUrl.trim().length > 0 &&
+    settings.value.ai.model.trim().length > 0 &&
+    (settings.value.ai.alwaysSuggest || hostRecommendations.value.length === 0);
 
-    if (aiRecs.length > 0) recommendations.value = aiRecs;
+  if (shouldAskAi) {
+    try {
+      const aiIds = await recommendAiFolderIds({
+        baseUrl: settings.value.ai.baseUrl,
+        apiKey: settings.value.ai.apiKey,
+        model: settings.value.ai.model,
+        topN: settings.value.topN,
+        pageUrl: pageUrl.value,
+        pageTitle: pageTitle.value,
+        folders: folders.map((f) => ({ id: f.id, path: f.path }))
+      });
+      const byId = new Map(folders.map((f) => [f.id, f] as const));
+      const aiRecs = aiIds
+        .map((id) => byId.get(id))
+        .filter(Boolean)
+        .map((f) => ({ folderId: f!.id, folderTitle: f!.title }));
+
+      aiRecommendations.value = aiRecs;
+      if (hostRecommendations.value.length === 0 && aiRecs.length > 0) {
+        selectedFolderId.value = aiRecs[0].folderId;
+      }
+    } catch {
+      aiRecommendations.value = [];
+    }
+  } else {
+    aiRecommendations.value = [];
   }
-
-  selectedFolderId.value = recommendations.value[0]?.folderId ?? '';
 
   try {
     const existing = await promisify((cb) => chrome.bookmarks.search({ url: pageUrl.value }, cb));

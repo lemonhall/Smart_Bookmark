@@ -3,6 +3,7 @@ export type SmartBookmarkAiSettings = {
   baseUrl: string;
   model: string;
   apiKey: string;
+  alwaysSuggest: boolean;
 };
 
 export type SmartBookmarkSettings = {
@@ -20,7 +21,8 @@ export const DEFAULT_SETTINGS: SmartBookmarkSettings = {
     enabled: false,
     baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-5.2',
-    apiKey: ''
+    apiKey: '',
+    alwaysSuggest: true
   }
 };
 
@@ -72,7 +74,8 @@ function sanitizeSettings(raw: unknown): SmartBookmarkSettings {
       enabled: coerceBool(aiRaw.enabled, DEFAULT_SETTINGS.ai.enabled),
       baseUrl: normalizeBaseUrl(rawBaseUrl || DEFAULT_SETTINGS.ai.baseUrl),
       model: coerceString(aiRaw.model, DEFAULT_SETTINGS.ai.model).trim(),
-      apiKey: coerceString(aiRaw.apiKey, DEFAULT_SETTINGS.ai.apiKey)
+      apiKey: coerceString(aiRaw.apiKey, DEFAULT_SETTINGS.ai.apiKey),
+      alwaysSuggest: coerceBool(aiRaw.alwaysSuggest, DEFAULT_SETTINGS.ai.alwaysSuggest)
     }
   };
 }

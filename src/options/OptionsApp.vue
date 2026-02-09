@@ -33,6 +33,11 @@
       </div>
 
       <div class="row">
+        <label class="label" for="alwaysSuggest">Always show AI suggestions</label>
+        <input id="alwaysSuggest" type="checkbox" v-model="alwaysSuggest" :disabled="!aiEnabled" />
+      </div>
+
+      <div class="row">
         <label class="label" for="baseUrl">Base URL</label>
         <input
           id="baseUrl"
@@ -89,6 +94,7 @@ import { testAiConnection } from '../lib/testAiConnection';
 const topN = ref<number>(DEFAULT_SETTINGS.topN);
 const closeOnSave = ref<boolean>(DEFAULT_SETTINGS.closeOnSave);
 const aiEnabled = ref<boolean>(DEFAULT_SETTINGS.ai.enabled);
+const alwaysSuggest = ref<boolean>(DEFAULT_SETTINGS.ai.alwaysSuggest);
 const baseUrl = ref<string>(DEFAULT_SETTINGS.ai.baseUrl);
 const model = ref<string>(DEFAULT_SETTINGS.ai.model);
 const apiKey = ref<string>(DEFAULT_SETTINGS.ai.apiKey);
@@ -162,6 +168,7 @@ async function onSave() {
       closeOnSave: closeOnSave.value,
       ai: {
         enabled: aiEnabled.value,
+        alwaysSuggest: alwaysSuggest.value,
         baseUrl: baseUrl.value,
         model: model.value,
         apiKey: apiKey.value
@@ -204,6 +211,7 @@ async function onReset() {
   topN.value = DEFAULT_SETTINGS.topN;
   closeOnSave.value = DEFAULT_SETTINGS.closeOnSave;
   aiEnabled.value = DEFAULT_SETTINGS.ai.enabled;
+  alwaysSuggest.value = DEFAULT_SETTINGS.ai.alwaysSuggest;
   baseUrl.value = DEFAULT_SETTINGS.ai.baseUrl;
   model.value = DEFAULT_SETTINGS.ai.model;
   apiKey.value = DEFAULT_SETTINGS.ai.apiKey;
@@ -216,6 +224,7 @@ onMounted(async () => {
     topN.value = s.topN;
     closeOnSave.value = s.closeOnSave;
     aiEnabled.value = s.ai.enabled;
+    alwaysSuggest.value = s.ai.alwaysSuggest;
     baseUrl.value = s.ai.baseUrl;
     model.value = s.ai.model;
     apiKey.value = s.ai.apiKey;
