@@ -7,10 +7,11 @@
     "dev": "vite",
     "dev:ext": "vite build --watch",
     "build": "vite build",
+    "build:test": "vite build --mode test",
     "test": "vitest run",
     "test:watch": "vitest",
-    "e2e": "npm run build && playwright test",
-    "e2e:ui": "npm run build && playwright test --ui"
+    "e2e": "npm run build:test && playwright test",
+    "e2e:ui": "npm run build:test && playwright test --ui"
   },
   "dependencies": {
     "tldts": "^7.0.23",

@@ -143,3 +143,21 @@ popup 必须展示：
 **验收（Acceptance）**
 - A1：E2E 覆盖：存在重复时能看到提示。
 - A2：E2E 覆盖：仍可保存并创建新书签。
+
+## 8. v4 增量需求（CI + Build Modes）
+
+### REQ-013 生产构建不包含测试 Harness（P1）
+
+发布用的 `npm run build` 产物不得包含 E2E 测试 harness 页面/脚本（`src/testHarness/**`），以降低发布包攻击面与审核风险；E2E 运行使用 `npm run build:test`（测试模式）包含 harness。
+
+**验收（Acceptance）**
+- A1：`npm run build` 后 `dist/src/testHarness/harness.html` 不存在。
+- A2：`npm run build:test` 后 `dist/src/testHarness/harness.html` 存在且 `npm run e2e` 全绿。
+
+### REQ-014 CI 自动验证（P1）
+
+仓库需要 CI 在 push/PR 时自动运行 `npm test` 与 `npm run e2e`（扩展 E2E 需 headed 环境，使用 Xvfb）。
+
+**验收（Acceptance）**
+- A1：GitHub Actions workflow 可见且在 push 时自动触发。
+- A2：CI 日志显示单测与 E2E 都通过。

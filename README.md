@@ -15,6 +15,7 @@ Chrome Manifest V3 extension that recommends bookmark folders by host (hostname)
 - Unit tests: `npm test`
 - E2E (Playwright): `npm run e2e`
 - Build extension: `npm run build` → outputs `dist/`
+- Build (E2E/test mode): `npm run build:test` → outputs `dist/` with harness
 
 ## Load in Chrome
 
@@ -35,6 +36,7 @@ Chrome Manifest V3 extension that recommends bookmark folders by host (hostname)
 - Core algorithm: `src/lib/recommendHostFolders.ts`
 - E2E harness (bookmark seeding/reset): `src/testHarness/harness.ts`
 - E2E launcher: `e2e/utils/launchExtension.ts`
+- CI workflow: `.github/workflows/ci.yml`
 
 ## Playwright browsers (Windows)
 

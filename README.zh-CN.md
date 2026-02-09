@@ -15,6 +15,7 @@
 - 单测（Vitest）：`npm test`
 - 端到端（Playwright）：`npm run e2e`
 - 构建扩展：`npm run build`（输出到 `dist/`）
+- 测试构建（E2E 用，包含 harness）：`npm run build:test`（输出到 `dist/`）
 
 ## 在 Chrome 里加载（unpacked）
 
@@ -35,6 +36,7 @@
 - 核心算法：`src/lib/recommendHostFolders.ts`
 - E2E Harness（种书签/重置）：`src/testHarness/harness.ts`
 - E2E 启动器：`e2e/utils/launchExtension.ts`
+- CI：`.github/workflows/ci.yml`
 
 ## Playwright 浏览器安装（Windows）
 

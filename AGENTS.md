@@ -60,6 +60,10 @@ User triggers popup / command
 ### Full (preferred)
 - `npm test && npm run e2e`
 
+### Build outputs
+- Production build (no harness): `npm run build`
+- Test build (includes harness for E2E): `npm run build:test`
+
 ### Unit tests (Vitest)
 - All: `npm test`
 - One file: `npx vitest run src/lib/recommendHostFolders.test.ts`
@@ -69,8 +73,11 @@ User triggers popup / command
 - One spec: `npm run e2e -- e2e/extension-flow.spec.ts`
 - UI mode: `npm run e2e:ui`
 
+### CI (GitHub Actions)
+- Workflow: `.github/workflows/ci.yml`
+- Note: extension E2E requires headed Chromium; CI runs it under Xvfb.
+
 ### E2E Troubleshooting (Windows)
 - If Chromium is missing: `npx playwright install chromium`
 - If install “hangs” / no output: remove the lock directory then retry:
   - `Remove-Item "$env:LOCALAPPDATA\\ms-playwright\\__dirlock" -Recurse -Force`
-
