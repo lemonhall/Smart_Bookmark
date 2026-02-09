@@ -97,6 +97,43 @@ function setStatus(kind: 'idle' | 'ok' | 'error', message: string) {
   status.message = message;
 }
 
+function toOriginPattern(baseUrlText: string): string | null {
+  try {
+    const url = new URL(baseUrlText);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+    return `${url.origin}/*`;
+  } catch {
+    return null;
+  }
+}
+
+async function ensureHostPermissionForBaseUrl(): Promise<boolean> {
+  const originPattern = toOriginPattern(baseUrl.value);
+  if (!originPattern) {
+    setStatus('error', 'Invalid Base URL (must be http(s) URL)');
+    return false;
+  }
+
+  try {
+    const already = await chrome.permissions.contains({ origins: [originPattern] });
+    if (already) return true;
+  } catch {
+    // continue to request
+  }
+
+  try {
+    const granted = await chrome.permissions.request({ origins: [originPattern] });
+    if (!granted) {
+      setStatus('error', `Permission denied for ${originPattern}`);
+      return false;
+    }
+    return true;
+  } catch {
+    setStatus('error', `Unable to request permission for ${originPattern}`);
+    return false;
+  }
+}
+
 async function openShortcuts() {
   try {
     await chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
@@ -109,6 +146,13 @@ async function onSave() {
   saving.value = true;
   setStatus('idle', '');
   try {
+    if (aiEnabled.value) {
+      const ok = await ensureHostPermissionForBaseUrl();
+      if (!ok) {
+        aiEnabled.value = false;
+      }
+    }
+
     await saveSettings({
       topN: topN.value,
       closeOnSave: closeOnSave.value,
@@ -119,7 +163,7 @@ async function onSave() {
         apiKey: apiKey.value
       }
     });
-    setStatus('ok', 'Saved');
+    setStatus('ok', aiEnabled.value ? 'Saved (AI enabled)' : 'Saved');
   } catch {
     setStatus('error', 'Save failed');
   } finally {

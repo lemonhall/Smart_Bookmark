@@ -33,6 +33,7 @@ Chrome Manifest V3 extension that recommends bookmark folders for the current pa
 ## Options
 
 - Open the extension options page to configure Top N / close-on-save / AI fallback.
+- If your AI `Base URL` uses a different domain, Chrome needs host permission for it. The options page will request it on save.
 
 ## Repo map
 
