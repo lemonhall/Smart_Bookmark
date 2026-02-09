@@ -13,7 +13,9 @@ test('allows manual folder selection when no host matches', async () => {
     // @ts-expect-error
     const rootId = await window.__sbHarness.getTestRootId();
     // @ts-expect-error
-    return await window.__sbHarness.createFolder(rootId, 'Misc');
+    const parentId = await window.__sbHarness.createFolder(rootId, 'Parent');
+    // @ts-expect-error
+    return await window.__sbHarness.createFolder(parentId, 'Misc');
   });
 
   const popup = await context.newPage();
@@ -32,6 +34,7 @@ test('allows manual folder selection when no host matches', async () => {
   await expect(popup.getByText('No host matches')).toBeVisible();
 
   await expect(popup.getByTestId('folder-select')).toBeVisible();
+  await expect(popup.locator(`option[value="${miscFolderId}"]`)).toContainText('Parent / Misc');
   await popup.getByTestId('folder-select').selectOption(miscFolderId);
   await popup.getByTestId('confirm-save').click();
   await expect(popup.getByTestId('save-status')).toHaveText('saved');
@@ -42,6 +45,18 @@ test('allows manual folder selection when no host matches', async () => {
   });
   expect(created.length).toBe(1);
   expect(httpRequests).toEqual([]);
+
+  const popup2 = await context.newPage();
+  popup2.on('request', (req) => {
+    if (/^https?:/i.test(req.url())) httpRequests.push(req.url());
+  });
+  await popup2.goto(
+    `chrome-extension://${extensionId}/popup.html?url=${encodeURIComponent(
+      'https://no-match.local/another'
+    )}&title=${encodeURIComponent('Another')}`
+  );
+  await expect(popup2.getByText('No host matches')).toBeVisible();
+  await expect(popup2.getByTestId('folder-select')).toHaveValue(miscFolderId);
 
   await context.close();
   fs.rmSync(userDataDir, { recursive: true, force: true });

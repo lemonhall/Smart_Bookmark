@@ -58,9 +58,7 @@
             class="select-field"
           >
             <option value="" disabled>Choose a destination folder</option>
-            <option v-for="f in allFolders" :key="f.id" :value="f.id">
-              📁 {{ f.title }}
-            </option>
+            <option v-for="f in allFolders" :key="f.id" :value="f.id">{{ f.path }}</option>
           </select>
         </div>
       </section>
@@ -89,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { recommendHostFolders, type HostFolderRecommendation } from '../lib/recommendHostFolders';
 
 // --- 保持逻辑不变 ---
@@ -107,7 +105,8 @@ const pageUrl = ref<string>('');
 const pageTitle = ref<string>('');
 const recommendations = ref<HostFolderRecommendation[]>([]);
 const selectedFolderId = ref<string>('');
-const allFolders = ref<Array<{ id: string; title: string }>>([]);
+const allFolders = ref<Array<{ id: string; title: string; path: string }>>([]);
+const folderPathById = ref<Record<string, string>>({});
 const saveStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
 const canSave = computed(() => pageUrl.value.length > 0 && selectedFolderId.value.length > 0);
@@ -128,18 +127,38 @@ async function loadPageContext(): Promise<void> {
 async function loadRecommendations(): Promise<void> {
   if (!pageUrl.value) return;
   const tree = await promisify((cb) => chrome.bookmarks.getTree(cb));
-  const folders: Array<{ id: string; title: string }> = [];
-  const visit = (node: any) => {
+  const folders: Array<{ id: string; title: string; path: string }> = [];
+  const paths: Record<string, string> = {};
+
+  const shouldSkipSegment = (node: any): boolean => {
+    const id = String(node?.id ?? '');
+    const title = String(node?.title ?? '');
+    if (id === '0' || id === '1' || id === '2' || id === '3') return true;
+    if (title === '__SB_TEST_ROOT__') return true;
+    return title.trim().length === 0;
+  };
+
+  const visit = (node: any, segments: string[]) => {
     if (!node) return;
+    const nextSegments = shouldSkipSegment(node)
+      ? segments
+      : [...segments, String(node.title)];
+
     if (!node.url && node.id && typeof node.title === 'string') {
-      if (node.id !== '0') folders.push({ id: String(node.id), title: node.title });
+      if (String(node.id) !== '0') {
+        const path = nextSegments.join(' / ');
+        folders.push({ id: String(node.id), title: node.title, path });
+        paths[String(node.id)] = path;
+      }
     }
     if (Array.isArray(node.children)) {
-      for (const child of node.children) visit(child);
+      for (const child of node.children) visit(child, nextSegments);
     }
   };
-  for (const root of tree as any[]) visit(root);
+  for (const root of tree as any[]) visit(root, []);
+  folders.sort((a, b) => a.path.localeCompare(b.path, 'zh-Hans-CN'));
   allFolders.value = folders;
+  folderPathById.value = paths;
 
   recommendations.value = recommendHostFolders({
     url: pageUrl.value,
@@ -147,6 +166,16 @@ async function loadRecommendations(): Promise<void> {
     limit: 3
   });
   selectedFolderId.value = recommendations.value[0]?.folderId ?? '';
+
+  if (!selectedFolderId.value) {
+    const last = await promisify<Record<string, unknown>>((cb) =>
+      chrome.storage.local.get('lastFolderId', cb)
+    );
+    const lastFolderId = typeof last.lastFolderId === 'string' ? last.lastFolderId : '';
+    if (lastFolderId && folders.some((f) => f.id === lastFolderId)) {
+      selectedFolderId.value = lastFolderId;
+    }
+  }
 }
 
 async function onSave(): Promise<void> {
@@ -159,6 +188,7 @@ async function onSave(): Promise<void> {
         cb
       )
     );
+    await promisify((cb) => chrome.storage.local.set({ lastFolderId: selectedFolderId.value }, cb));
     saveStatus.value = 'saved';
     setTimeout(() => { if (saveStatus.value === 'saved') window.close(); }, 1500);
   } catch {
@@ -169,6 +199,28 @@ async function onSave(): Promise<void> {
 onMounted(async () => {
   await loadPageContext();
   await loadRecommendations();
+});
+
+const onKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    window.close();
+    return;
+  }
+
+  if (event.key === 'Enter') {
+    if (!canSave.value || saveStatus.value === 'saving') return;
+    event.preventDefault();
+    void onSave();
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('keydown', onKeyDown, true);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeyDown, true);
 });
 </script>
 

@@ -43,7 +43,7 @@ test('recommends folders by host and creates bookmark on confirm', async () => {
   await expect(popup.getByTestId('recommendation-item').nth(0)).toContainText('AI工具');
   await expect(popup.getByTestId('recommendation-item').nth(1)).toContainText('Linux');
 
-  await popup.getByTestId('confirm-save').click();
+  await popup.keyboard.press('Enter');
   await expect(popup.getByTestId('save-status')).toHaveText('saved');
 
   const created = await harness.evaluate(async () => {

@@ -17,16 +17,10 @@ export type HostFolderRecommendation = {
   count: number;
 };
 
-export function recommendHostFolders(
-  input: RecommendHostFoldersInput
+function computeCountsForHost(
+  bookmarksTree: BookmarkNode[],
+  targetHost: string
 ): HostFolderRecommendation[] {
-  let targetHost: string;
-  try {
-    targetHost = new URL(input.url).hostname;
-  } catch {
-    return [];
-  }
-
   const counts = new Map<string, HostFolderRecommendation>();
 
   const visit = (node: BookmarkNode, currentFolder: BookmarkNode | null) => {
@@ -54,19 +48,36 @@ export function recommendHostFolders(
     if (!node.children) return;
 
     const nextFolder = node.children.length > 0 ? node : currentFolder;
-    for (const child of node.children) {
-      visit(child, nextFolder);
-    }
+    for (const child of node.children) visit(child, nextFolder);
   };
 
-  for (const root of input.bookmarksTree) {
-    visit(root, null);
+  for (const root of bookmarksTree) visit(root, null);
+
+  return Array.from(counts.values()).sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    return a.folderTitle.localeCompare(b.folderTitle, 'zh-Hans-CN');
+  });
+}
+
+function parentDomainOnce(hostname: string): string | null {
+  const parts = hostname.split('.').filter(Boolean);
+  if (parts.length <= 2) return null;
+  return parts.slice(1).join('.');
+}
+
+export function recommendHostFolders(input: RecommendHostFoldersInput): HostFolderRecommendation[] {
+  let targetHost: string;
+  try {
+    targetHost = new URL(input.url).hostname;
+  } catch {
+    return [];
   }
 
-  return Array.from(counts.values())
-    .sort((a, b) => {
-      if (b.count !== a.count) return b.count - a.count;
-      return a.folderTitle.localeCompare(b.folderTitle, 'zh-Hans-CN');
-    })
-    .slice(0, input.limit);
+  let ranked = computeCountsForHost(input.bookmarksTree, targetHost);
+  if (ranked.length === 0) {
+    const parent = parentDomainOnce(targetHost);
+    if (parent) ranked = computeCountsForHost(input.bookmarksTree, parent);
+  }
+
+  return ranked.slice(0, input.limit);
 }

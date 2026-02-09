@@ -10,7 +10,7 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["bookmarks", "tabs", "activeTab"],
+  "permissions": ["bookmarks", "tabs", "activeTab", "storage"],
   "commands": {
     "open-smart-bookmark": {
       "suggested_key": {

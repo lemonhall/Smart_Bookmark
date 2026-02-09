@@ -66,5 +66,29 @@ describe('recommendHostFolders', () => {
 
     expect(result).toEqual([]);
   });
-});
 
+  it('falls back to parent domain when exact host has no matches', () => {
+    const tree: BookmarkNode[] = [
+      {
+        id: '0',
+        title: 'root',
+        children: [
+          {
+            id: '10',
+            title: 'Docs',
+            children: [{ id: 'b1', title: 'd1', url: 'https://example.com/guide' }]
+          }
+        ]
+      }
+    ];
+
+    const result = recommendHostFolders({
+      url: 'https://docs.example.com/getting-started',
+      bookmarksTree: tree,
+      limit: 3
+    });
+
+    expect(result.map((r) => r.folderTitle)).toEqual(['Docs']);
+    expect(result[0].count).toBe(1);
+  });
+});

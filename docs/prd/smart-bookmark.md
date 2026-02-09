@@ -88,3 +88,34 @@ popup 必须展示：
 - D2：`npm run e2e` 全绿（Playwright）。
 - D3：`npm run build` 成功产出 `dist/`，可作为 Chrome unpacked extension 加载。
 - D4（反作弊）：E2E 需真实加载扩展并走通“种书签 → 打开 popup → 出现推荐 → 点击确认创建书签”的路径（不得只测静态页面）。
+
+## 6. v2 增量需求（Quality + UX）
+
+### REQ-006 Host 父域回退（P1）
+
+当精确 host 无命中时，尝试一次父域回退（例如 `docs.example.com` → `example.com`）再进行 Host 推荐。
+
+**验收（Acceptance）**
+- A1：回退后若存在命中，推荐列表非空且排名逻辑同 REQ-002。
+
+### REQ-007 键盘操作（P1）
+
+- Enter：当可保存时触发保存
+- Esc：关闭 popup
+
+**验收（Acceptance）**
+- A1：E2E 覆盖 Enter 保存成功路径。
+
+### REQ-008 文件夹路径展示（P1）
+
+在下拉框中展示“文件夹路径”（`A / B / C`），避免同名文件夹歧义。
+
+**验收（Acceptance）**
+- A1：当存在嵌套文件夹时，UI 展示包含分隔符的路径字符串。
+
+### REQ-009 最近使用文件夹（P1）
+
+保存成功后把目标文件夹 id 记为“最近使用”；当 Host 无命中时，若最近文件夹仍存在则默认选中它。
+
+**验收（Acceptance）**
+- A1：E2E 覆盖：一次保存后，再打开一个无 host 命中的页面，默认选中最近文件夹（若仍存在）。
