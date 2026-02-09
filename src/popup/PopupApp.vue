@@ -74,6 +74,31 @@
           </label>
         </div>
 
+        <div v-if="selectedCreate !== null" class="create-editor" data-testid="ai-create-editor">
+          <div class="form-group">
+            <label class="label">Folder name</label>
+            <input
+              data-testid="create-folder-title"
+              v-model="createFolderTitle"
+              class="input-field"
+              placeholder="New folder name"
+            />
+          </div>
+          <div class="form-group">
+            <label class="label">Parent folder</label>
+            <div class="select-wrapper">
+              <select
+                data-testid="create-folder-parent"
+                v-model="createFolderParentId"
+                class="select-field"
+              >
+                <option v-for="f in allFolders" :key="f.id" :value="f.id">{{ f.path }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="hint-text">Will create the folder and save the current page into it.</div>
+        </div>
+
         <div class="recommendation-grid">
           <label
             v-for="rec in aiRecommendations"
@@ -173,18 +198,29 @@ const aiCreateSuggestion = ref<(AiCreateFolderSuggestion & { parentPath: string 
 const selectedFolderId = ref<string>('');
 const allFolders = ref<Array<{ id: string; title: string; path: string }>>([]);
 const folderPathById = ref<Record<string, string>>({});
-const saveStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle');
-const duplicateLocations = ref<string[]>([]);
-const settings = ref<SmartBookmarkSettings>(DEFAULT_SETTINGS);
-const selectedCreate = ref<AiCreateFolderSuggestion | null>(null);
-const pageSignals = ref<PageSignals | null>(null);
+ const saveStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle');
+ const duplicateLocations = ref<string[]>([]);
+ const settings = ref<SmartBookmarkSettings>(DEFAULT_SETTINGS);
+ const selectedCreate = ref<AiCreateFolderSuggestion | null>(null);
+ const pageSignals = ref<PageSignals | null>(null);
+const createFolderTitle = ref<string>('');
+const createFolderParentId = ref<string>('');
 
-const canSave = computed(
-  () => pageUrl.value.length > 0 && (selectedFolderId.value.length > 0 || selectedCreate.value !== null)
-);
+const canSave = computed(() => {
+  if (!pageUrl.value) return false;
+  if (selectedFolderId.value.length > 0) return true;
+  if (selectedCreate.value === null) return false;
+  return createFolderTitle.value.trim().length > 0 && createFolderParentId.value.trim().length > 0;
+});
 
 watch(selectedFolderId, (next) => {
   if (next && next.length > 0) selectedCreate.value = null;
+});
+
+watch(selectedCreate, (next) => {
+  if (!next) return;
+  createFolderTitle.value = next.title;
+  createFolderParentId.value = next.parentFolderId;
 });
 
 function selectCreateSuggestion(): void {
@@ -385,7 +421,10 @@ async function onSave(): Promise<void> {
     if (selectedCreate.value) {
       const createdFolder = await promisify((cb) =>
         chrome.bookmarks.create(
-          { parentId: selectedCreate.value!.parentFolderId, title: selectedCreate.value!.title },
+          {
+            parentId: createFolderParentId.value.trim(),
+            title: createFolderTitle.value.trim()
+          },
           cb
         )
       );
@@ -640,6 +679,20 @@ onUnmounted(() => {
   padding: 16px;
   border-top: 1px solid var(--border-color);
   background: #f9fafb;
+}
+
+.create-editor {
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+  border-radius: var(--radius);
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.hint-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 6px;
 }
 
 .save-button {

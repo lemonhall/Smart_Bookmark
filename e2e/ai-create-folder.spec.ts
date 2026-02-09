@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import { launchExtensionContext } from './utils/launchExtension';
 
-test('AI suggests creating a new folder and saving into it', async () => {
+test('AI suggests creating a new folder and allows editing name/parent before saving', async () => {
   const { context, extensionId, userDataDir } = await launchExtensionContext();
 
   const harness = await context.newPage();
@@ -15,6 +15,8 @@ test('AI suggests creating a new folder and saving into it', async () => {
     const rootId = await window.__sbHarness.getTestRootId();
     // @ts-expect-error
     const parentId = await window.__sbHarness.createFolder(rootId, '技术');
+    // @ts-expect-error
+    const otherParentId = await window.__sbHarness.createFolder(rootId, '杂项');
     // @ts-expect-error
     await window.__sbHarness.setLocalStorage({
       sbSettings: {
@@ -29,10 +31,11 @@ test('AI suggests creating a new folder and saving into it', async () => {
         }
       }
     });
-    return { rootId, parentId };
+    return { rootId, parentId, otherParentId };
   });
 
   const newFolderTitle = '__SB_AI_NEW_FOLDER__';
+  const editedFolderTitle = '__SB_AI_NEW_FOLDER_EDITED__';
 
   await context.route('https://api.openai.com/v1/responses', async (route) => {
     await route.fulfill({
@@ -68,6 +71,10 @@ test('AI suggests creating a new folder and saving into it', async () => {
   await expect(popup.getByTestId('ai-create-suggestion')).toContainText(newFolderTitle);
   await popup.getByTestId('ai-create-suggestion').click();
 
+  await expect(popup.getByTestId('ai-create-editor')).toBeVisible();
+  await popup.getByTestId('create-folder-title').fill(editedFolderTitle);
+  await popup.getByTestId('create-folder-parent').selectOption(ids.otherParentId);
+
   await popup.keyboard.press('Enter');
   await expect(popup.getByTestId('save-status')).toHaveText('saved');
 
@@ -81,7 +88,7 @@ test('AI suggests creating a new folder and saving into it', async () => {
       const bookmarkParentId = bookmarks[0]?.parentId ?? null;
       return { folderId: folder.id, bookmarkParentId, bookmarks };
     },
-    { parentId: ids.parentId, newFolderTitle, targetUrl }
+    { parentId: ids.otherParentId, newFolderTitle: editedFolderTitle, targetUrl }
   );
 
   expect(created.folderId).toBeTruthy();
@@ -91,4 +98,3 @@ test('AI suggests creating a new folder and saving into it', async () => {
   await context.close();
   fs.rmSync(userDataDir, { recursive: true, force: true });
 });
-

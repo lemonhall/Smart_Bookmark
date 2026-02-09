@@ -258,3 +258,20 @@ AI 兜底推荐的 OpenAI 调用实现应复用 `openagentic-sdk-ts` 的 OpenAI 
 - A1：扩展 manifest 包含使用 `chrome.scripting` 所需权限。
 - A2：当 AI 开启时，AI 请求 payload 包含上述 Page Signals 字段（若缺失则为空/省略，但字段命名一致）。
 - A3：E2E/单测可断言：AI payload 仍不包含任意“已存在书签 URL 列表”（只包含 folder candidates + 当前页 signals）。
+
+## 13. v9 增量需求（Editable Create Folder）
+
+### REQ-022 可微调新建文件夹建议（P0）
+
+当 AI 给出 “create” 建议时，用户在确认保存前可以微调：
+- 新建文件夹的标题（可编辑）
+- 新建文件夹的父目录（可从现有文件夹列表中选择）
+
+确认保存后执行：
+1) 在选择的父目录下创建该文件夹
+2) 把当前页面书签保存到新建文件夹中
+
+**验收（Acceptance）**
+- A1：选中 create 建议后，popup 展示“Folder name / Parent folder”的编辑控件并可修改。
+- A2：保存后新建文件夹出现在用户选择的父目录下，且书签位于新建文件夹内。
+- A3：Playwright E2E 覆盖：mock AI create 建议 → 修改标题/父目录 → 保存成功并断言结构正确。
