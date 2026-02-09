@@ -184,6 +184,17 @@ onMounted(async () => {
   --radius: 8px;
 }
 
+.popup-container,
+:global(html),
+:global(body),
+:global(#app) {
+  height: 100%;
+}
+
+.popup-container {
+  min-height: 100vh;
+}
+
 .popup-container {
   width: 360px;
   max-height: 600px;
