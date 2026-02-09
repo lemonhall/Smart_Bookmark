@@ -7,13 +7,13 @@ test('allows manual folder selection when no host matches', async () => {
 
   const harness = await context.newPage();
   await harness.goto(`chrome-extension://${extensionId}/src/testHarness/harness.html`);
-  await harness.evaluate(async () => {
+  const miscFolderId = await harness.evaluate(async () => {
     // @ts-expect-error
     await window.__sbHarness.reset();
     // @ts-expect-error
     const rootId = await window.__sbHarness.getTestRootId();
     // @ts-expect-error
-    await window.__sbHarness.createFolder(rootId, 'Misc');
+    return await window.__sbHarness.createFolder(rootId, 'Misc');
   });
 
   const popup = await context.newPage();
@@ -32,7 +32,7 @@ test('allows manual folder selection when no host matches', async () => {
   await expect(popup.getByText('No host matches')).toBeVisible();
 
   await expect(popup.getByTestId('folder-select')).toBeVisible();
-  await popup.getByTestId('folder-select').selectOption({ label: 'Misc' });
+  await popup.getByTestId('folder-select').selectOption(miscFolderId);
   await popup.getByTestId('confirm-save').click();
   await expect(popup.getByTestId('save-status')).toHaveText('saved');
 
