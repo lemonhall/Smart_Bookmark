@@ -39,4 +39,5 @@
 
 ## Push 状态
 
-- 说明：当前目录尚未初始化 git 远程；当进入 Ship 阶段会尝试 `git init`/commit，并在失败时记录原因。
+- 2026-02-09：已执行 `git init` + commit。
+- 2026-02-09：执行 `git push` 失败：`fatal: No configured push destination.`（尚未配置 remote）。
