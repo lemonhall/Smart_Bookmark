@@ -2,19 +2,47 @@
 
 Smart Bookmark is a Chrome Manifest V3 extension (Vue 3 + Vite + TypeScript).
 
-- Unit tests: Vitest (`npm test`)
-- E2E: Playwright that loads the real unpacked extension from `dist/` (`npm run e2e`)
+Recommended runtime/tooling:
+- Node.js: 24.x (matches CI)
+- Shell: PowerShell 7.x (`pwsh`)
 
-## Quick commands
+## Quick Commands (PowerShell)
 
-- Dev server: `npm run dev`
-- Build (production, no harness): `npm run build`
+- Install deps: `npm ci`
+- Dev (Vite server): `npm run dev`
+- Dev (extension rebuild watch to `dist/`): `npm run dev:ext`
+- Build (production): `npm run build`
 - Build (test mode, includes harness): `npm run build:test`
-- Unit tests: `npm test`
-- E2E tests: `npm run e2e`
+- Typecheck (tsc, no emit): `npx tsc -p tsconfig.json`
+- Unit tests (Vitest): `npm test`
+- E2E tests (Playwright): `npm run e2e`
+- E2E UI: `npm run e2e:ui`
 - Zip for sharing/store: `npm run package:zip`
 
+First-time Playwright setup (if Chromium is missing): `npx playwright install chromium`
+
 Note: `npm run e2e` rebuilds `dist/` in test mode. Run `npm run build` to restore a production `dist/`.
+
+## Environment & Shell
+
+- This repo is documented with **PowerShell** syntax in mind.
+  - Prefer `;` to chain commands (works in Windows PowerShell 5.1 and PowerShell 7.x).
+  - Avoid bash-isms like `&&` / `||` unless you intentionally rely on PowerShell 7's semantics.
+- If you must run bash commands, use WSL explicitly (e.g. `wsl -e bash -lc '...'`).
+
+## Proxy (optional)
+
+If you are behind a local proxy (e.g. `127.0.0.1:7897`), set it for the current shell session:
+
+```powershell
+$env:HTTP_PROXY='http://127.0.0.1:7897'; $env:HTTPS_PROXY='http://127.0.0.1:7897'
+```
+
+Prefer repo-local config (avoid polluting global config):
+- npm (project): `npm config set proxy http://127.0.0.1:7897 --location=project`
+- npm (project): `npm config set https-proxy http://127.0.0.1:7897 --location=project`
+- git (repo): `git config --local http.proxy http://127.0.0.1:7897`
+- git (repo): `git config --local https.proxy http://127.0.0.1:7897`
 
 ## Docs (source of truth)
 
@@ -45,6 +73,16 @@ Note: `npm run e2e` rebuilds `dist/` in test mode. Run `npm run build` to restor
   - page: `src/testHarness/harness.html`
   - API: `src/testHarness/harness.ts` (exposes `window.__sbHarness`)
 - E2E runner (loads unpacked extension from `dist/`): `e2e/utils/launchExtension.ts`
+
+## Code Style & Conventions
+
+- TypeScript is `strict: true` (see `tsconfig.json`).
+- Prefer small, pure, unit-testable functions in `src/lib/` (Vitest), and keep Chrome API side-effects in UI/background layers.
+- Match existing formatting in the touched files:
+  - Indent: 2 spaces
+  - Quotes: single quotes
+  - Semicolons: yes
+- Avoid `any` unless you are bridging a third-party boundary and can justify it.
 
 ## Data flow (runtime)
 
@@ -88,6 +126,9 @@ Flow:
   - AI request payload must never include any existing bookmark URLs (only current page url/title + optional page signals + folder candidates `{id,path}`).
 - Host permissions:
   - `public/manifest.json` grants default hosts and declares optional host permissions; `OptionsApp.vue` requests the baseUrl origin on save/test.
+- Secrets:
+  - Never hardcode API keys/tokens.
+  - If local dev needs secrets, use environment variables or an ignored local file (never commit).
 - Do not “fix” E2E by switching to system Google Chrome.
   - Use Playwright-managed Chromium (`npx playwright install chromium`) and `launchPersistentContext` with extension args.
 - Don’t rely on manual regression.
@@ -97,6 +138,7 @@ Flow:
 
 - Full (preferred): `npm test && npm run e2e`
 - Unit (Vitest): `npm test` (includes `npm run build:deps` first)
+- Unit (single file): `npm test -- src/lib/recommendHostFolders.test.ts`
 - E2E (Playwright): `npm run e2e` or `npm run e2e -- e2e/extension-flow.spec.ts`
 - CI: `.github/workflows/ci.yml` (Node 24; installs Chromium; runs unit + E2E under Xvfb)
 
@@ -110,3 +152,10 @@ Flow:
 
 - If Vite/Vitest fails with `Error: spawn EPERM` (esbuild service startup), it’s usually an OS policy/AV restriction on spawning `node_modules\\@esbuild\\win32-x64\\esbuild.exe` with piped stdio.
   - Try reinstalling deps (`npm ci`), unblocking that exe (if your environment uses Mark-of-the-Web), or allowlisting it in your security tooling.
+
+## Scope & Precedence
+
+- Root `AGENTS.md` applies by default across the repo.
+- A closer `AGENTS.md` in a subdirectory overrides within that subtree.
+- `AGENTS.override.md` (if present in the same directory) takes precedence over `AGENTS.md`.
+- Chat/user instructions override repository docs.
